@@ -1,0 +1,192 @@
+/**
+ * Site Snags — front-end styling.
+ * Brand colours: #ee4367 (accent), #e2ecf3 (light), #000000 (text).
+ */
+
+#site-snags-root {
+	position: fixed;
+	right: 20px;
+	bottom: 20px;
+	z-index: 999999;
+}
+
+.site-snags-toggle {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 18px;
+	background: #000000;
+	color: #ffffff;
+	border: none;
+	border-radius: 999px;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	box-shadow: 0 4px 14px rgba( 0, 0, 0, 0.25 );
+	transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.site-snags-toggle:hover {
+	transform: translateY( -1px );
+}
+
+.site-snags-toggle.is-active {
+	background: #ee4367;
+}
+
+.site-snags-toggle__icon {
+	font-size: 16px;
+	line-height: 1;
+}
+
+/* Cursor + affordance while snag mode is active */
+body.site-snags-mode-active {
+	cursor: crosshair !important;
+}
+
+body.site-snags-mode-active * {
+	cursor: crosshair !important;
+}
+
+#site-snags-pins,
+.site-snags-popover {
+	cursor: auto;
+}
+
+/* Pins */
+#site-snags-pins {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 0;
+	height: 0;
+}
+
+.site-snags-pin {
+	position: absolute;
+	width: 26px;
+	height: 26px;
+	margin: -13px 0 0 -13px;
+	border-radius: 50% 50% 50% 0;
+	transform: rotate( -45deg );
+	border: none;
+	background: #ee4367;
+	box-shadow: 0 2px 6px rgba( 0, 0, 0, 0.35 );
+	z-index: 999998;
+	cursor: pointer;
+	padding: 0;
+}
+
+.site-snags-pin::after {
+	content: '';
+	position: absolute;
+	top: 6px;
+	left: 6px;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #ffffff;
+}
+
+.site-snags-pin--done {
+	background: #7ea88a;
+	opacity: 0.55;
+}
+
+.site-snags-pin:hover {
+	filter: brightness( 1.08 );
+}
+
+/* Popover */
+.site-snags-popover {
+	position: absolute;
+	z-index: 1000000;
+	width: 260px;
+	background: #ffffff;
+	border-radius: 8px;
+	box-shadow: 0 8px 24px rgba( 0, 0, 0, 0.25 );
+	padding: 12px;
+	font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	font-size: 13px;
+	color: #000000;
+}
+
+.site-snags-popover__meta {
+	font-size: 11px;
+	color: #6b7280;
+	margin-bottom: 6px;
+}
+
+.site-snags-popover__input {
+	width: 100%;
+	min-height: 70px;
+	padding: 8px;
+	border: 1px solid #e2ecf3;
+	border-radius: 6px;
+	font-family: inherit;
+	font-size: 13px;
+	resize: vertical;
+	box-sizing: border-box;
+	background: #e2ecf3;
+}
+
+.site-snags-popover__input:focus {
+	outline: 2px solid #ee4367;
+	outline-offset: 1px;
+	background: #ffffff;
+}
+
+.site-snags-popover__actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+	margin-top: 8px;
+	flex-wrap: wrap;
+}
+
+.site-snags-btn {
+	padding: 6px 12px;
+	border: none;
+	border-radius: 6px;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+	background: #e2ecf3;
+	color: #000000;
+}
+
+.site-snags-btn--save {
+	background: #ee4367;
+	color: #ffffff;
+}
+
+.site-snags-btn--delete {
+	background: transparent;
+	color: #ee4367;
+	margin-right: auto;
+}
+
+.site-snags-btn--status {
+	background: #000000;
+	color: #ffffff;
+}
+
+/* Admin list table status pill */
+.site-snags-status {
+	display: inline-block;
+	padding: 2px 10px;
+	border-radius: 999px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.site-snags-status--open {
+	background: #fde2e8;
+	color: #ee4367;
+}
+
+.site-snags-status--done {
+	background: #e2f3e8;
+	color: #3a7a52;
+}
