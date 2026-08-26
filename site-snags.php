@@ -115,6 +115,7 @@ final class Site_Snags {
 		new Site_Snags_Ajax();
 		new Site_Snags_Frontend();
 		new Site_Snags_Admin_List();
+		new Site_Snags_Settings();
 
 		register_activation_hook( __FILE__, array( $this, 'on_activation' ) );
 	}

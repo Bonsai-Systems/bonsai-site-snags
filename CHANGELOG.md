@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- [includes/class-site-snags-cpt.php] `site_snag` CPT's `capabilities` array only mapped singular meta caps (`edit_post`, `delete_post`, etc.), missing the plural primitive caps (`delete_posts`, `delete_others_posts`, `delete_private_posts`, `delete_published_posts`, `edit_private_posts`, `edit_published_posts`). Anything auditing all registered post types' capabilities without a specific post ID (e.g. User Role Editor Pro) triggered WordPress's `map_meta_cap()` "called incorrectly" notice on every check. With `WP_DEBUG_DISPLAY` on, those notices were echoed raw into the page mid-render — including inside the `<ul id="adminmenu">` markup — visually truncating the wp-admin sidebar (Settings, ACF, WP Puller, UpdraftPlus, etc. all disappearing) and breaking UpdraftPlus's own localized admin JS in the process
+- [site-snags.php] `Site_Snags_Settings` was `require_once`'d but never instantiated in `Site_Snags::__construct()`, so its `admin_menu`/`admin_post` hooks never registered and the Site Snags → Settings submenu never appeared
+
 ## [1.2.0] - 2026-08-26
 
 ### Changed
