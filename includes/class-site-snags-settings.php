@@ -166,9 +166,13 @@ class Site_Snags_Settings {
 								<input type="checkbox" name="site_snags_notification_events[note_updated]" value="1" <?php checked( ! empty( $notify['events']['note_updated'] ) ); ?> />
 								<?php esc_html_e( 'A snag note is edited', 'site-snags' ); ?>
 							</label>
-							<label style="display:block;">
+							<label style="display:block; margin-bottom:6px;">
 								<input type="checkbox" name="site_snags_notification_events[completed]" value="1" <?php checked( ! empty( $notify['events']['completed'] ) ); ?> />
 								<?php esc_html_e( 'A snag is marked done', 'site-snags' ); ?>
+							</label>
+							<label style="display:block;">
+								<input type="checkbox" name="site_snags_notification_events[commented]" value="1" <?php checked( ! empty( $notify['events']['commented'] ) ); ?> />
+								<?php esc_html_e( 'A comment is added to a snag', 'site-snags' ); ?>
 							</label>
 						</td>
 					</tr>
@@ -204,6 +208,7 @@ class Site_Snags_Settings {
 						'created'      => empty( $events_in['created'] ) ? 0 : 1,
 						'note_updated' => empty( $events_in['note_updated'] ) ? 0 : 1,
 						'completed'    => empty( $events_in['completed'] ) ? 0 : 1,
+						'commented'    => empty( $events_in['commented'] ) ? 0 : 1,
 					),
 				)
 			);

@@ -18,6 +18,7 @@ class Site_Snags_Notifications {
 		add_action( 'site_snags_snag_created', array( $this, 'on_created' ), 10, 2 );
 		add_action( 'site_snags_snag_note_updated', array( $this, 'on_note_updated' ), 10, 2 );
 		add_action( 'site_snags_snag_completed', array( $this, 'on_completed' ), 10, 2 );
+		add_action( 'wp_insert_comment', array( $this, 'on_comment' ), 10, 2 );
 	}
 
 	/**
@@ -95,6 +96,49 @@ class Site_Snags_Notifications {
 	}
 
 	/**
+	 * A comment was added to a snag.
+	 *
+	 * @param int        $comment_id Comment ID.
+	 * @param WP_Comment $comment    Comment object.
+	 */
+	public function on_comment( $comment_id, $comment ) {
+		if ( ! $this->is_event_enabled( 'commented' ) ) {
+			return;
+		}
+
+		$comment = $comment instanceof WP_Comment ? $comment : get_comment( $comment_id );
+		if ( ! $comment ) {
+			return;
+		}
+
+		// Only real comments on snags that are already approved.
+		if ( ! in_array( (string) $comment->comment_type, array( '', 'comment' ), true ) ) {
+			return;
+		}
+		if ( '1' !== (string) $comment->comment_approved ) {
+			return;
+		}
+		if ( 'site_snag' !== get_post_type( $comment->comment_post_ID ) ) {
+			return;
+		}
+
+		$this->dispatch(
+			'commented',
+			(int) $comment->comment_post_ID,
+			(int) $comment->user_id,
+			/* translators: %s: page title or URL the snag was logged on. */
+			__( 'New comment on snag on %s', 'site-snags' ),
+			/* translators: 1: user display name, 2: page title or URL. */
+			__( '%1$s commented on a snag on "%2$s".', 'site-snags' ),
+			array(
+				'',
+				/* translators: %s: the comment text. */
+				sprintf( __( 'Comment: %s', 'site-snags' ), $comment->comment_content ),
+			)
+		);
+	}
+
+	/**
 	 * Build and send the notification email to every recipient.
 	 *
 	 * @param string $event        Event key, passed through to the filter.
@@ -102,8 +146,9 @@ class Site_Snags_Notifications {
 	 * @param int    $actor_id     User who triggered the event (never emailed).
 	 * @param string $subject_tmpl sprintf template, one %s for the page title.
 	 * @param string $line_tmpl    sprintf template, %1$s actor, %2$s page title.
+	 * @param array  $extra_lines  Optional extra body lines, inserted after the note/status block.
 	 */
-	private function dispatch( $event, $post_id, $actor_id, $subject_tmpl, $line_tmpl ) {
+	private function dispatch( $event, $post_id, $actor_id, $subject_tmpl, $line_tmpl, $extra_lines = array() ) {
 		$recipients = site_snags_get_notification_recipients( $actor_id );
 		if ( empty( $recipients ) ) {
 			return;
@@ -134,8 +179,13 @@ class Site_Snags_Notifications {
 			sprintf( __( 'Note: %s', 'site-snags' ), $note ),
 			/* translators: %s: Open or Done. */
 			sprintf( __( 'Status: %s', 'site-snags' ), $status ),
-			'',
 		);
+
+		if ( ! empty( $extra_lines ) ) {
+			$body_lines = array_merge( $body_lines, array_map( 'strval', $extra_lines ) );
+		}
+
+		$body_lines[] = '';
 
 		if ( $url ) {
 			/* translators: %s: front-end URL the snag was logged on. */

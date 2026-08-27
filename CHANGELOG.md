@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-08-27
+
+### Added
+- [includes/class-site-snags-notifications.php] Email notification when a comment is added to a snag. New `commented` event: `on_comment()` listens on `wp_insert_comment`, fires only for approved, real comments on `site_snag` posts, excludes the commenter, and includes the comment text in the email body. `dispatch()` gained an optional `$extra_lines` parameter for per-event body content
+- [includes/class-site-snags-settings.php, site-snags.php] "A comment is added to a snag" toggle on the notification settings screen; `commented => 1` added to the notification defaults, so it is on once the plugin updates
+- [includes/class-site-snags-cpt.php] Read-only **Note** meta box on the snag edit screen, showing the full `_snag_note_raw` text (the post title only holds the first few words)
+
+### Changed
+- [includes/class-site-snags-cpt.php] Removed `editor` from the `site_snag` CPT `supports` — the snag note is stored in post meta, not `post_content`, so the WYSIWYG box was always empty
+
 ## [1.3.0] - 2026-08-27
 
 ### Added

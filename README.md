@@ -42,10 +42,11 @@ Under **wp-admin → Site Snags → Settings** there's an "Email notifications" 
 - a snag is added
 - a snag's note is edited
 - a snag is marked done
+- a comment is added to a snag
 
-Each event has its own toggle. Whoever performed the action is never emailed about their own change. The email carries the note, current status, the front-end URL, and a link to the snag's edit screen.
+Each event has its own toggle. Whoever performed the action is never emailed about their own change. The email carries the note, current status, the front-end URL, and a link to the snag's edit screen (comment notifications also include the comment text).
 
-Defaults to on for all three events once the plugin updates — turn the whole thing off, or drop individual events, on the Settings screen. Stored as a single `site_snags_notification_settings` option.
+Defaults to on for all four events once the plugin updates — turn the whole thing off, or drop individual events, on the Settings screen. Stored as a single `site_snags_notification_settings` option.
 
 Two filters for customisation:
 
