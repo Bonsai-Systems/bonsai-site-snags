@@ -43,10 +43,27 @@ class Site_Snags_CPT {
 			'menu_icon'           => 'dashicons-flag',
 			'menu_position'       => 100,
 			'capability_type'     => 'post',
+			/**
+			 * Deliberately does NOT override the singular meta-cap keys
+			 * (edit_post/read_post/delete_post). Doing so — even to a
+			 * capability as innocuous-looking as `manage_options` — makes
+			 * WordPress register that capability as a GLOBAL ALIAS back to
+			 * the real meta cap (see `$post_type_meta_caps` in
+			 * wp-includes/capabilities.php). Every unrelated
+			 * `current_user_can( 'manage_options' )` check anywhere on the
+			 * site then gets silently rerouted through
+			 * `map_meta_cap( 'delete_post', $user_id )` with no post
+			 * object, triggering WordPress's "called incorrectly" notice
+			 * site-wide (reproduced with this plugin as the only active
+			 * one — confirmed via `$post_type_meta_caps` in core).
+			 *
+			 * Leaving the singular keys at their WordPress defaults means
+			 * no alias is registered. `map_meta_cap => true` still routes
+			 * per-post edit/read/delete checks through the plural
+			 * primitives below (author vs non-author), which are gated on
+			 * SITE_SNAGS_CAP exactly as before.
+			 */
 			'capabilities'        => array(
-				'edit_post'              => SITE_SNAGS_CAP,
-				'read_post'              => SITE_SNAGS_CAP,
-				'delete_post'            => SITE_SNAGS_CAP,
 				'edit_posts'             => SITE_SNAGS_CAP,
 				'edit_others_posts'      => SITE_SNAGS_CAP,
 				'edit_private_posts'     => SITE_SNAGS_CAP,

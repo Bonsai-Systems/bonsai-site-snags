@@ -129,6 +129,12 @@ body.site-snags-mode-active * {
 	resize: vertical;
 	box-sizing: border-box;
 	background: #e2ecf3;
+	/* Host theme stylesheets frequently style bare textarea/input elements
+	 * (often white text for dark-themed forms) with a specificity that beats
+	 * inheriting `color` from .site-snags-popover. Set it explicitly here so
+	 * typed text is never invisible against our own background regardless of
+	 * the page it's injected into. */
+	color: #000000 !important;
 }
 
 .site-snags-popover__input:focus {
