@@ -84,6 +84,59 @@ function site_snags_user_is_allowed( $user_id = 0 ) {
 }
 
 /**
+ * The snag priority levels: slug => label + swatch colour.
+ *
+ * Order matters — it's the order the swatches render in the front-end
+ * popover and the wp-admin filter dropdown. Filterable so a site can
+ * relabel or recolour them without touching the plugin.
+ *
+ * @return array<string,array{label:string,color:string}>
+ */
+function site_snags_get_priorities() {
+	return apply_filters(
+		'site_snags_priorities',
+		array(
+			'urgent' => array(
+				'label' => __( 'Urgent', 'site-snags' ),
+				'color' => '#e5484d',
+			),
+			'normal' => array(
+				'label' => __( 'Normal', 'site-snags' ),
+				'color' => '#f5a623',
+			),
+			'low'    => array(
+				'label' => __( 'Not urgent', 'site-snags' ),
+				'color' => '#46a758',
+			),
+		)
+	);
+}
+
+/**
+ * The stored priority slug for a snag, guaranteed to be a valid key.
+ * Snags created before this feature existed have no meta row — they
+ * read as 'normal'.
+ *
+ * @param int $post_id Snag post ID.
+ * @return string
+ */
+function site_snags_get_priority( $post_id ) {
+	$priority = get_post_meta( $post_id, '_snag_priority', true );
+	return array_key_exists( $priority, site_snags_get_priorities() ) ? $priority : 'normal';
+}
+
+/**
+ * Human-readable label for a snag's current priority.
+ *
+ * @param int $post_id Snag post ID.
+ * @return string
+ */
+function site_snags_get_priority_label( $post_id ) {
+	$priorities = site_snags_get_priorities();
+	return $priorities[ site_snags_get_priority( $post_id ) ]['label'];
+}
+
+/**
  * Default notification settings, merged over whatever the site has saved.
  *
  * Defaults to fully on so that turning the feature on is zero-config — a

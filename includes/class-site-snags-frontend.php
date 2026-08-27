@@ -49,6 +49,14 @@ class Site_Snags_Frontend {
 			true
 		);
 
+		$priorities = array();
+		foreach ( site_snags_get_priorities() as $slug => $data ) {
+			$priorities[] = array(
+				'slug'  => $slug,
+				'label' => $data['label'],
+			);
+		}
+
 		global $wp;
 		$current_url = home_url( add_query_arg( array(), $wp->request ) );
 		// Fall back to REQUEST_URI if $wp->request is empty (front page etc).
@@ -60,13 +68,15 @@ class Site_Snags_Frontend {
 			'site-snags',
 			'SiteSnags',
 			array(
-				'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
-				'nonce'     => wp_create_nonce( 'site_snags_nonce' ),
-				'pageUrl'   => esc_url_raw( $current_url ),
-				'pageTitle' => wp_get_document_title(),
-				'listUrl'   => admin_url( 'edit.php?post_type=site_snag' ),
-				'i18n'      => array(
+				'ajaxUrl'    => admin_url( 'admin-ajax.php' ),
+				'nonce'      => wp_create_nonce( 'site_snags_nonce' ),
+				'pageUrl'    => esc_url_raw( $current_url ),
+				'pageTitle'  => wp_get_document_title(),
+				'listUrl'    => admin_url( 'edit.php?post_type=site_snag' ),
+				'priorities' => $priorities,
+				'i18n'       => array(
 					'placeholder' => __( 'What needs fixing here?', 'site-snags' ),
+					'priority'    => __( 'Priority', 'site-snags' ),
 					'save'        => __( 'Save', 'site-snags' ),
 					'cancel'      => __( 'Cancel', 'site-snags' ),
 					'markDone'    => __( 'Mark done', 'site-snags' ),

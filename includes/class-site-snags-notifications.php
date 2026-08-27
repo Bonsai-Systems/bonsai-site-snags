@@ -179,6 +179,8 @@ class Site_Snags_Notifications {
 			sprintf( __( 'Note: %s', 'site-snags' ), $note ),
 			/* translators: %s: Open or Done. */
 			sprintf( __( 'Status: %s', 'site-snags' ), $status ),
+			/* translators: %s: Urgent, Normal or Not urgent. */
+			sprintf( __( 'Priority: %s', 'site-snags' ), site_snags_get_priority_label( $post_id ) ),
 		);
 
 		if ( ! empty( $extra_lines ) ) {

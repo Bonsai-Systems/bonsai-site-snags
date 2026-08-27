@@ -14,8 +14,32 @@ class Site_Snags_Admin_List {
 		add_filter( 'manage_site_snag_posts_columns', array( $this, 'columns' ) );
 		add_action( 'manage_site_snag_posts_custom_column', array( $this, 'render_column' ), 10, 2 );
 		add_filter( 'views_edit-site_snag', array( $this, 'status_views' ) );
-		add_action( 'pre_get_posts', array( $this, 'filter_by_status' ) );
+		add_action( 'restrict_manage_posts', array( $this, 'priority_filter_dropdown' ) );
+		add_action( 'pre_get_posts', array( $this, 'filter_admin_query' ) );
 		add_filter( 'post_row_actions', array( $this, 'row_actions' ), 10, 2 );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_css' ) );
+	}
+
+	/**
+	 * Load the shared stylesheet on the snag list screen so the status and
+	 * priority cells pick up their styling.
+	 *
+	 * @param string $hook Current admin page.
+	 */
+	public function enqueue_admin_css( $hook ) {
+		if ( 'edit.php' !== $hook ) {
+			return;
+		}
+		$post_type = isset( $_GET['post_type'] ) ? sanitize_key( wp_unslash( $_GET['post_type'] ) ) : '';
+		if ( 'site_snag' !== $post_type ) {
+			return;
+		}
+		wp_enqueue_style(
+			'site-snags',
+			SITE_SNAGS_URL . 'assets/css/site-snags.css',
+			array(),
+			SITE_SNAGS_VERSION
+		);
 	}
 
 	/**
@@ -26,12 +50,13 @@ class Site_Snags_Admin_List {
 	 */
 	public function columns( $columns ) {
 		$new = array(
-			'cb'          => $columns['cb'],
-			'title'       => __( 'Note', 'site-snags' ),
-			'snag_page'   => __( 'Page', 'site-snags' ),
-			'snag_status' => __( 'Status', 'site-snags' ),
-			'author'      => $columns['author'] ?? __( 'Logged by', 'site-snags' ),
-			'date'        => $columns['date'],
+			'cb'            => $columns['cb'],
+			'title'         => __( 'Note', 'site-snags' ),
+			'snag_page'     => __( 'Page', 'site-snags' ),
+			'snag_priority' => __( 'Priority', 'site-snags' ),
+			'snag_status'   => __( 'Status', 'site-snags' ),
+			'author'        => $columns['author'] ?? __( 'Logged by', 'site-snags' ),
+			'date'          => $columns['date'],
 		);
 		return $new;
 	}
@@ -53,6 +78,16 @@ class Site_Snags_Admin_List {
 					esc_html( $page_title ? $page_title : $url )
 				);
 			}
+		}
+
+		if ( 'snag_priority' === $column ) {
+			$priorities = site_snags_get_priorities();
+			$priority   = site_snags_get_priority( $post_id );
+			printf(
+				'<span class="site-snags-priority site-snags-priority--%1$s"><span class="site-snags-priority__dot"></span>%2$s</span>',
+				esc_attr( $priority ),
+				esc_html( $priorities[ $priority ]['label'] )
+			);
 		}
 
 		if ( 'snag_status' === $column ) {
@@ -125,11 +160,39 @@ class Site_Snags_Admin_List {
 	}
 
 	/**
-	 * Apply the open/done filter to the main list query.
+	 * Output the priority filter dropdown above the list table, next to the
+	 * built-in date/category filters.
+	 *
+	 * @param string $post_type Current screen's post type.
+	 */
+	public function priority_filter_dropdown( $post_type ) {
+		if ( 'site_snag' !== $post_type ) {
+			return;
+		}
+
+		$current = isset( $_GET['snag_priority'] ) ? sanitize_text_field( wp_unslash( $_GET['snag_priority'] ) ) : '';
+
+		echo '<label class="screen-reader-text" for="snag_priority">' . esc_html__( 'Filter by priority', 'site-snags' ) . '</label>';
+		echo '<select name="snag_priority" id="snag_priority">';
+		printf( '<option value="">%s</option>', esc_html__( 'All priorities', 'site-snags' ) );
+		foreach ( site_snags_get_priorities() as $slug => $data ) {
+			printf(
+				'<option value="%1$s"%2$s>%3$s</option>',
+				esc_attr( $slug ),
+				selected( $current, $slug, false ),
+				esc_html( $data['label'] )
+			);
+		}
+		echo '</select>';
+	}
+
+	/**
+	 * Apply the open/done and priority filters to the main list query.
+	 * Both can be active at once, so the meta clauses are combined.
 	 *
 	 * @param WP_Query $query Current query.
 	 */
-	public function filter_by_status( $query ) {
+	public function filter_admin_query( $query ) {
 		if ( ! is_admin() || ! $query->is_main_query() ) {
 			return;
 		}
@@ -138,24 +201,47 @@ class Site_Snags_Admin_List {
 			return;
 		}
 
-		if ( empty( $_GET['snag_status'] ) ) {
-			return;
-		}
+		$meta_query = array();
 
-		$status = sanitize_text_field( wp_unslash( $_GET['snag_status'] ) );
-		if ( ! in_array( $status, array( 'open', 'done' ), true ) ) {
-			return;
-		}
-
-		$query->set(
-			'meta_query',
-			array(
-				array(
+		if ( ! empty( $_GET['snag_status'] ) ) {
+			$status = sanitize_text_field( wp_unslash( $_GET['snag_status'] ) );
+			if ( in_array( $status, array( 'open', 'done' ), true ) ) {
+				$meta_query[] = array(
 					'key'   => '_snag_status',
 					'value' => $status,
-				),
-			)
-		);
+				);
+			}
+		}
+
+		if ( ! empty( $_GET['snag_priority'] ) ) {
+			$priority = sanitize_text_field( wp_unslash( $_GET['snag_priority'] ) );
+			if ( array_key_exists( $priority, site_snags_get_priorities() ) ) {
+				if ( 'normal' === $priority ) {
+					// Snags from before the priority feature have no meta row —
+					// treat "missing" as "normal" so they still show up here.
+					$meta_query[] = array(
+						'relation' => 'OR',
+						array(
+							'key'   => '_snag_priority',
+							'value' => 'normal',
+						),
+						array(
+							'key'     => '_snag_priority',
+							'compare' => 'NOT EXISTS',
+						),
+					);
+				} else {
+					$meta_query[] = array(
+						'key'   => '_snag_priority',
+						'value' => $priority,
+					);
+				}
+			}
+		}
+
+		if ( $meta_query ) {
+			$query->set( 'meta_query', $meta_query );
+		}
 	}
 
 	/**

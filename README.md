@@ -6,7 +6,7 @@ A lightweight front-end QA/snagging layer for admins — no settings page depend
 
 ## What it does
 
-Drops a "Snags" toggle button (bottom right) on the front end for logged-in admins only. Turn it on, click anywhere on the page, drop a note. Notes appear as pins on the page and as a QA punch-list under **wp-admin → Site Snags**, filterable by Open/Done. Click a pin to edit, mark done, or delete.
+Drops a "Snags" toggle button (bottom right) on the front end for logged-in admins only. Turn it on, click anywhere on the page, drop a note and set a priority (Urgent / Normal / Not urgent). Notes appear as pins on the page and as a QA punch-list under **wp-admin → Site Snags**, filterable by Open/Done and by priority. Click a pin to edit the note, change priority, mark done, or delete.
 
 Nobody without the `manage_options` capability (or whatever you filter it to — see below) ever sees the toggle, the pins, or loads any of the JS/CSS. Zero front-end footprint for real visitors.
 
@@ -54,6 +54,27 @@ Two filters for customisation:
 - `site_snags_notification_email` — `( array $email, string $event, int $post_id, int $actor_id )` — override `subject` / `body` / `headers` (e.g. send HTML, add a Cc, route to a shared inbox)
 
 There are also three action hooks if you want to bolt on Slack/Make.com delivery instead: `site_snags_snag_created`, `site_snags_snag_note_updated`, `site_snags_snag_completed`, each passing `( int $post_id, int $actor_id )`.
+
+## Priority
+
+Every snag carries a priority, set from the three coloured squares bottom-left of the note popover:
+
+- **Urgent** — red
+- **Normal** — orange (default)
+- **Not urgent** — green
+
+Change it later from the same swatches on an existing pin's popover (saves immediately). The **wp-admin → Site Snags** list shows a Priority column and a "All priorities" filter dropdown above the table, which combines with the Open/Done filter. Priority is also included in the notification emails.
+
+Relabel or recolour the levels with the `site_snags_priorities` filter:
+
+```php
+add_filter( 'site_snags_priorities', function ( $priorities ) {
+    $priorities['urgent']['label'] = 'Blocker';
+    return $priorities;
+} );
+```
+
+Snags logged before this feature existed read as **Normal**.
 
 ## How pin positioning survives page changes
 

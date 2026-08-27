@@ -9,6 +9,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [1.4.0] - 2026-08-27
 
 ### Added
+- **Snag priority (Urgent / Normal / Not urgent).** Three coloured squares (red / orange / green) bottom-left of the front-end note popover — set on creation and changeable later from an existing pin's popover (persists immediately via the new `site_snags_update_priority` AJAX action). Stored as `_snag_priority` post meta, default `normal`
+  - [site-snags.php] `site_snags_get_priorities()` (slug → label + colour, filterable via `site_snags_priorities`), `site_snags_get_priority()` and `site_snags_get_priority_label()` helpers
+  - [includes/class-site-snags-admin-list.php] Priority column and an "All priorities" filter dropdown on the wp-admin list; `filter_by_status()` replaced by `filter_admin_query()`, which combines the Open/Done and priority meta clauses so both filters work together. Legacy snags with no `_snag_priority` row match the "Normal" filter via `NOT EXISTS`. Shared stylesheet now enqueued on the list screen (also fixes the previously-unstyled status pill)
+  - [includes/class-site-snags-cpt.php] Read-only Note meta box now shows the current priority; `_snag_priority` registered with a `sanitize_priority` callback
+  - [includes/class-site-snags-notifications.php] Notification emails now include a `Priority:` line
 - [includes/class-site-snags-notifications.php] Email notification when a comment is added to a snag. New `commented` event: `on_comment()` listens on `wp_insert_comment`, fires only for approved, real comments on `site_snag` posts, excludes the commenter, and includes the comment text in the email body. `dispatch()` gained an optional `$extra_lines` parameter for per-event body content
 - [includes/class-site-snags-settings.php, site-snags.php] "A comment is added to a snag" toggle on the notification settings screen; `commented => 1` added to the notification defaults, so it is on once the plugin updates
 - [includes/class-site-snags-cpt.php] Read-only **Note** meta box on the snag edit screen, showing the full `_snag_note_raw` text (the post title only holds the first few words)

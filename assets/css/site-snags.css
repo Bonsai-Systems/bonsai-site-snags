@@ -173,6 +173,53 @@ body.site-snags-mode-active * {
 	margin-right: auto;
 }
 
+/* In the detail popover the priority group owns the left slot, so the
+ * delete button sits with the rest of the action buttons on the right. */
+.site-snags-popover--detail .site-snags-btn--delete {
+	margin-right: 0;
+}
+
+/* Priority swatches — bottom-left of the popover action row */
+.site-snags-popover__priority {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	margin-right: auto;
+}
+
+.site-snags-prio {
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: 2px solid transparent;
+	border-radius: 4px;
+	cursor: pointer;
+	opacity: 0.4;
+	transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.site-snags-prio:hover {
+	opacity: 0.75;
+}
+
+.site-snags-prio.is-selected {
+	opacity: 1;
+	border-color: #000000;
+	transform: scale( 1.08 );
+}
+
+.site-snags-prio--urgent {
+	background: #e5484d;
+}
+
+.site-snags-prio--normal {
+	background: #f5a623;
+}
+
+.site-snags-prio--low {
+	background: #46a758;
+}
+
 .site-snags-btn--status {
 	background: #000000;
 	color: #ffffff;
@@ -195,4 +242,32 @@ body.site-snags-mode-active * {
 .site-snags-status--done {
 	background: #e2f3e8;
 	color: #3a7a52;
+}
+
+/* Admin list table priority cell */
+.site-snags-priority {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.site-snags-priority__dot {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border-radius: 3px;
+}
+
+.site-snags-priority--urgent .site-snags-priority__dot {
+	background: #e5484d;
+}
+
+.site-snags-priority--normal .site-snags-priority__dot {
+	background: #f5a623;
+}
+
+.site-snags-priority--low .site-snags-priority__dot {
+	background: #46a758;
 }

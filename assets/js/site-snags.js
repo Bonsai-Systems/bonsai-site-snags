@@ -148,6 +148,60 @@
 	}
 
 	/**
+	 * Escape a string for safe use inside an HTML attribute.
+	 */
+	function escAttr( value ) {
+		return String( value == null ? '' : value )
+			.replace( /&/g, '&amp;' )
+			.replace( /"/g, '&quot;' )
+			.replace( /</g, '&lt;' )
+			.replace( />/g, '&gt;' );
+	}
+
+	/**
+	 * Build the priority swatch group (red = urgent, orange = normal,
+	 * green = not urgent). Sits bottom-left of the popover action row.
+	 */
+	function buildPrioritySelector( selected ) {
+		var list = SiteSnags.priorities || [];
+		var html = '<div class="site-snags-popover__priority" role="radiogroup" aria-label="' + escAttr( SiteSnags.i18n.priority ) + '">';
+
+		list.forEach( function ( p ) {
+			var on = p.slug === selected;
+			html += '<button type="button" class="site-snags-prio site-snags-prio--' + p.slug + ( on ? ' is-selected' : '' ) +
+				'" data-priority="' + escAttr( p.slug ) + '" role="radio" aria-checked="' + ( on ? 'true' : 'false' ) +
+				'" title="' + escAttr( p.label ) + '" aria-label="' + escAttr( p.label ) + '"></button>';
+		} );
+
+		return html + '</div>';
+	}
+
+	/**
+	 * Wire up click-to-select on a popover's priority swatches.
+	 *
+	 * @param {jQuery}   $popover The popover element.
+	 * @param {Function} onChange Optional — called with the new slug on select.
+	 */
+	function wirePrioritySelector( $popover, onChange ) {
+		$popover.find( '.site-snags-prio' ).on( 'click', function () {
+			$( this ).addClass( 'is-selected' ).attr( 'aria-checked', 'true' )
+				.siblings( '.site-snags-prio' ).removeClass( 'is-selected' ).attr( 'aria-checked', 'false' );
+
+			if ( typeof onChange === 'function' ) {
+				onChange( $( this ).attr( 'data-priority' ) );
+			}
+		} );
+	}
+
+	/**
+	 * Read the currently selected priority slug from a popover.
+	 */
+	function selectedPriority( $popover ) {
+		var $sel = $popover.find( '.site-snags-prio.is-selected' ).first();
+		return $sel.length ? $sel.attr( 'data-priority' ) : 'normal';
+	}
+
+	/**
 	 * Popover shown when creating a brand new snag from a click.
 	 */
 	function openCreatePopover( x, y, selector, offsetX, offsetY ) {
@@ -157,6 +211,7 @@
 			'<div class="site-snags-popover">' +
 				'<textarea class="site-snags-popover__input" placeholder="' + SiteSnags.i18n.placeholder + '"></textarea>' +
 				'<div class="site-snags-popover__actions">' +
+					buildPrioritySelector( 'normal' ) +
 					'<button type="button" class="site-snags-btn site-snags-btn--cancel">' + SiteSnags.i18n.cancel + '</button>' +
 					'<button type="button" class="site-snags-btn site-snags-btn--save">' + SiteSnags.i18n.save + '</button>' +
 				'</div>' +
@@ -169,6 +224,8 @@
 
 		var $textarea = $popover.find( '.site-snags-popover__input' );
 		$textarea.trigger( 'focus' );
+
+		wirePrioritySelector( $popover );
 
 		$popover.find( '.site-snags-btn--cancel' ).on( 'click', closeActivePopover );
 
@@ -188,6 +245,7 @@
 				selector: selector,
 				offset_x: offsetX,
 				offset_y: offsetY,
+				priority: selectedPriority( $popover ),
 			} ).done( function ( response ) {
 				closeActivePopover();
 				if ( response && response.success ) {
@@ -211,6 +269,7 @@
 				'<div class="site-snags-popover__meta">' + snag.author + ' — ' + snag.created_at + '</div>' +
 				'<textarea class="site-snags-popover__input">' + $( '<div>' ).text( snag.note ).html() + '</textarea>' +
 				'<div class="site-snags-popover__actions">' +
+					buildPrioritySelector( snag.priority || 'normal' ) +
 					'<button type="button" class="site-snags-btn site-snags-btn--delete">' + SiteSnags.i18n['delete'] + '</button>' +
 					'<button type="button" class="site-snags-btn site-snags-btn--status">' + ( isDone ? SiteSnags.i18n.reopen : SiteSnags.i18n.markDone ) + '</button>' +
 					'<button type="button" class="site-snags-btn site-snags-btn--save">' + SiteSnags.i18n.save + '</button>' +
@@ -223,6 +282,19 @@
 		activePopover = $popover;
 
 		var $textarea = $popover.find( '.site-snags-popover__input' );
+
+		wirePrioritySelector( $popover, function ( priority ) {
+			$.post( SiteSnags.ajaxUrl, {
+				action: 'site_snags_update_priority',
+				nonce: SiteSnags.nonce,
+				id: snag.id,
+				priority: priority,
+			} ).done( function ( response ) {
+				if ( response && response.success ) {
+					snag.priority = priority;
+				}
+			} );
+		} );
 
 		$popover.find( '.site-snags-btn--save' ).on( 'click', function () {
 			var note = $.trim( $textarea.val() );

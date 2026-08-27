@@ -15,6 +15,7 @@ class Site_Snags_Ajax {
 	public function __construct() {
 		add_action( 'wp_ajax_site_snags_create', array( $this, 'create_snag' ) );
 		add_action( 'wp_ajax_site_snags_update_status', array( $this, 'update_status' ) );
+		add_action( 'wp_ajax_site_snags_update_priority', array( $this, 'update_priority' ) );
 		add_action( 'wp_ajax_site_snags_update_note', array( $this, 'update_note' ) );
 		add_action( 'wp_ajax_site_snags_delete', array( $this, 'delete_snag' ) );
 		add_action( 'wp_ajax_site_snags_fetch_for_page', array( $this, 'fetch_for_page' ) );
@@ -45,6 +46,10 @@ class Site_Snags_Ajax {
 		$offset_x   = isset( $_POST['offset_x'] ) ? (float) $_POST['offset_x'] : 0;
 		$offset_y   = isset( $_POST['offset_y'] ) ? (float) $_POST['offset_y'] : 0;
 		$page_title = isset( $_POST['page_title'] ) ? sanitize_text_field( wp_unslash( $_POST['page_title'] ) ) : '';
+		$priority   = isset( $_POST['priority'] ) ? sanitize_text_field( wp_unslash( $_POST['priority'] ) ) : 'normal';
+		if ( ! array_key_exists( $priority, site_snags_get_priorities() ) ) {
+			$priority = 'normal';
+		}
 
 		if ( '' === $note || '' === $url ) {
 			wp_send_json_error( array( 'message' => __( 'Missing note or URL.', 'site-snags' ) ), 400 );
@@ -69,6 +74,7 @@ class Site_Snags_Ajax {
 		update_post_meta( $post_id, '_snag_offset_x', max( 0, min( 100, $offset_x ) ) );
 		update_post_meta( $post_id, '_snag_offset_y', max( 0, min( 100, $offset_y ) ) );
 		update_post_meta( $post_id, '_snag_status', 'open' );
+		update_post_meta( $post_id, '_snag_priority', $priority );
 		update_post_meta( $post_id, '_snag_page_title', $page_title );
 		update_post_meta( $post_id, '_snag_note_raw', $note );
 
@@ -85,6 +91,7 @@ class Site_Snags_Ajax {
 				'id'         => $post_id,
 				'note'       => $note,
 				'status'     => 'open',
+				'priority'   => $priority,
 				'offset_x'   => $offset_x,
 				'offset_y'   => $offset_y,
 				'selector'   => $selector,
@@ -124,6 +131,28 @@ class Site_Snags_Ajax {
 		}
 
 		wp_send_json_success( array( 'id' => $post_id, 'status' => $status ) );
+	}
+
+	/**
+	 * Set a snag's priority (urgent / normal / low).
+	 */
+	public function update_priority() {
+		$this->verify_request();
+
+		$post_id  = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
+		$priority = isset( $_POST['priority'] ) ? sanitize_text_field( wp_unslash( $_POST['priority'] ) ) : '';
+
+		if ( ! $post_id || 'site_snag' !== get_post_type( $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Snag not found.', 'site-snags' ) ), 404 );
+		}
+
+		if ( ! array_key_exists( $priority, site_snags_get_priorities() ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid priority.', 'site-snags' ) ), 400 );
+		}
+
+		update_post_meta( $post_id, '_snag_priority', $priority );
+
+		wp_send_json_success( array( 'id' => $post_id, 'priority' => $priority ) );
 	}
 
 	/**
@@ -214,6 +243,7 @@ class Site_Snags_Ajax {
 				'id'         => $post->ID,
 				'note'       => get_post_meta( $post->ID, '_snag_note_raw', true ),
 				'status'     => get_post_meta( $post->ID, '_snag_status', true ),
+				'priority'   => site_snags_get_priority( $post->ID ),
 				'selector'   => get_post_meta( $post->ID, '_snag_selector', true ),
 				'offset_x'   => (float) get_post_meta( $post->ID, '_snag_offset_x', true ),
 				'offset_y'   => (float) get_post_meta( $post->ID, '_snag_offset_y', true ),

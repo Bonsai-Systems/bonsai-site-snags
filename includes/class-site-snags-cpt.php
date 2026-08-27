@@ -171,6 +171,19 @@ class Site_Snags_CPT {
 
 		register_post_meta(
 			'site_snag',
+			'_snag_priority',
+			array_merge(
+				$common_args,
+				array(
+					'type'              => 'string',
+					'default'           => 'normal',
+					'sanitize_callback' => array( $this, 'sanitize_priority' ),
+				)
+			)
+		);
+
+		register_post_meta(
+			'site_snag',
 			'_snag_page_title',
 			array_merge(
 				$common_args,
@@ -208,6 +221,16 @@ class Site_Snags_CPT {
 	public function render_note_meta_box( $post ) {
 		$note = get_post_meta( $post->ID, '_snag_note_raw', true );
 
+		$priorities = site_snags_get_priorities();
+		$priority   = site_snags_get_priority( $post->ID );
+
+		printf(
+			'<p style="margin:0 0 8px;"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-right:6px;background:%1$s;"></span><strong>%2$s</strong> %3$s</p>',
+			esc_attr( $priorities[ $priority ]['color'] ),
+			esc_html__( 'Priority:', 'site-snags' ),
+			esc_html( $priorities[ $priority ]['label'] )
+		);
+
 		if ( '' === $note || null === $note ) {
 			echo '<p class="description">' . esc_html__( 'No note recorded for this snag.', 'site-snags' ) . '</p>';
 			return;
@@ -236,5 +259,16 @@ class Site_Snags_CPT {
 	public function sanitize_status( $value ) {
 		$value = sanitize_text_field( $value );
 		return in_array( $value, array( 'open', 'done' ), true ) ? $value : 'open';
+	}
+
+	/**
+	 * Only allow known priority slugs.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	public function sanitize_priority( $value ) {
+		$value = sanitize_text_field( $value );
+		return array_key_exists( $value, site_snags_get_priorities() ) ? $value : 'normal';
 	}
 }
