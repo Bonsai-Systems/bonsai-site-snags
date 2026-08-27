@@ -35,6 +35,25 @@ Two layers of control:
 
 2. **Per-user allow-list** — under **wp-admin → Site Snags → Settings**, tick exactly which of those eligible users can actually see the toggle and log snags. Leave it unconfigured (never saved) and everyone with the capability gets access, same as before. Once saved, only ticked users see it — including on sites where multiple people have `manage_options` but you only want specific people using it on a given build.
 
+## Email notifications
+
+Under **wp-admin → Site Snags → Settings** there's an "Email notifications" section. When enabled, everyone who can use snagging (the allow-list, or everyone with the capability if it's unconfigured) gets a plain-text email when:
+
+- a snag is added
+- a snag's note is edited
+- a snag is marked done
+
+Each event has its own toggle. Whoever performed the action is never emailed about their own change. The email carries the note, current status, the front-end URL, and a link to the snag's edit screen.
+
+Defaults to on for all three events once the plugin updates — turn the whole thing off, or drop individual events, on the Settings screen. Stored as a single `site_snags_notification_settings` option.
+
+Two filters for customisation:
+
+- `site_snags_notification_recipients` — `( WP_User[] $recipients, int $exclude_user_id )` — change who gets mailed
+- `site_snags_notification_email` — `( array $email, string $event, int $post_id, int $actor_id )` — override `subject` / `body` / `headers` (e.g. send HTML, add a Cc, route to a shared inbox)
+
+There are also three action hooks if you want to bolt on Slack/Make.com delivery instead: `site_snags_snag_created`, `site_snags_snag_note_updated`, `site_snags_snag_completed`, each passing `( int $post_id, int $actor_id )`.
+
 ## How pin positioning survives page changes
 
 Clicks are stored as a CSS selector path + percentage offset within that element's box — not raw pixel coordinates. On reload, the selector is re-resolved and the pixel position recalculated against the element's current size/position. This means pins hold up across most responsive breakpoints and minor content edits. If the target element is deleted entirely, the pin won't render on the page, but the note is never lost — it's still visible (with a direct link back to the page) in the **wp-admin → Site Snags** list.
@@ -72,8 +91,9 @@ Sites check for updates every 6 hours (`$checkPeriod` argument to `buildUpdateCh
 
 - Screenshot capture on pin creation (canvas/html2canvas) so notes carry visual context even if the element later changes
 - Priority/severity tag (low/medium/high) on each snag
-- @mention / assign-to-user, with an email notification on new snag
-- Slack notification via Make.com webhook when a snag is logged or resolved — fits straight into the existing lead-gen/monitoring Make.com stack
+- Per-snag assign-to-user (route a snag to one person rather than notifying the whole allow-list) — email notifications themselves shipped in 1.3.0
+- Digest mode — one daily roundup email instead of one per event, for busy snagging sessions
+- Slack notification via Make.com webhook when a snag is logged or resolved — the `site_snags_snag_*` action hooks added in 1.3.0 make this a small glue script
 - CSV/PDF export of the punch-list for client handoff docs
 - Per-client-site enable/disable if this ever gets bundled into Drift App Suite rather than shipped as its own plugin
 - Optional "resolved but keep visible, faded" mode — already partly there via the done pin styling, could add a toggle to hide fully

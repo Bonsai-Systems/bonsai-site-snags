@@ -131,6 +131,51 @@ class Site_Snags_Settings {
 					</form>
 				<?php endif; ?>
 			<?php endif; ?>
+
+			<hr style="margin: 28px 0 20px;" />
+
+			<h2><?php esc_html_e( 'Email notifications', 'site-snags' ); ?></h2>
+			<p style="max-width: 640px;">
+				<?php esc_html_e( 'Email the people who can use snagging (the allow-list above, or everyone with the capability if it is unconfigured) when snag activity happens. Whoever performed the action is never emailed about their own change.', 'site-snags' ); ?>
+			</p>
+
+			<?php $notify = site_snags_get_notification_settings(); ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="site_snags_save_settings" />
+				<input type="hidden" name="site_snags_notifications_submit" value="1" />
+				<?php wp_nonce_field( self::NONCE, 'site_snags_settings_nonce_field' ); ?>
+
+				<table class="form-table" role="presentation" style="max-width: 640px;">
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Notifications', 'site-snags' ); ?></th>
+						<td>
+							<label>
+								<input type="checkbox" name="site_snags_notifications_enabled" value="1" <?php checked( ! empty( $notify['enabled'] ) ); ?> />
+								<?php esc_html_e( 'Send email notifications', 'site-snags' ); ?>
+							</label>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><?php esc_html_e( 'Notify on', 'site-snags' ); ?></th>
+						<td>
+							<label style="display:block; margin-bottom:6px;">
+								<input type="checkbox" name="site_snags_notification_events[created]" value="1" <?php checked( ! empty( $notify['events']['created'] ) ); ?> />
+								<?php esc_html_e( 'A snag is added', 'site-snags' ); ?>
+							</label>
+							<label style="display:block; margin-bottom:6px;">
+								<input type="checkbox" name="site_snags_notification_events[note_updated]" value="1" <?php checked( ! empty( $notify['events']['note_updated'] ) ); ?> />
+								<?php esc_html_e( 'A snag note is edited', 'site-snags' ); ?>
+							</label>
+							<label style="display:block;">
+								<input type="checkbox" name="site_snags_notification_events[completed]" value="1" <?php checked( ! empty( $notify['events']['completed'] ) ); ?> />
+								<?php esc_html_e( 'A snag is marked done', 'site-snags' ); ?>
+							</label>
+						</td>
+					</tr>
+				</table>
+
+				<?php submit_button( __( 'Save Notification Settings', 'site-snags' ) ); ?>
+			</form>
 		</div>
 		<?php
 	}
@@ -144,6 +189,27 @@ class Site_Snags_Settings {
 		}
 
 		check_admin_referer( self::NONCE, 'site_snags_settings_nonce_field' );
+
+		// Notification settings form — handled separately from the allow-list.
+		if ( ! empty( $_POST['site_snags_notifications_submit'] ) ) {
+			$events_in = ( isset( $_POST['site_snags_notification_events'] ) && is_array( $_POST['site_snags_notification_events'] ) )
+				? array_map( 'sanitize_text_field', wp_unslash( $_POST['site_snags_notification_events'] ) )
+				: array();
+
+			update_option(
+				'site_snags_notification_settings',
+				array(
+					'enabled' => empty( $_POST['site_snags_notifications_enabled'] ) ? 0 : 1,
+					'events'  => array(
+						'created'      => empty( $events_in['created'] ) ? 0 : 1,
+						'note_updated' => empty( $events_in['note_updated'] ) ? 0 : 1,
+						'completed'    => empty( $events_in['completed'] ) ? 0 : 1,
+					),
+				)
+			);
+
+			$this->redirect_to_settings();
+		}
 
 		if ( ! empty( $_POST['site_snags_reset'] ) ) {
 			delete_option( self::OPTION_KEY );
@@ -160,6 +226,13 @@ class Site_Snags_Settings {
 			update_option( self::OPTION_KEY, $submitted );
 		}
 
+		$this->redirect_to_settings();
+	}
+
+	/**
+	 * Redirect back to the settings screen with the "saved" flag set.
+	 */
+	private function redirect_to_settings() {
 		wp_safe_redirect(
 			add_query_arg(
 				array(

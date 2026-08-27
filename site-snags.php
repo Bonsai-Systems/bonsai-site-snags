@@ -2,15 +2,15 @@
 /**
  * Plugin Name: Bonsai Site Snags
  * Plugin URI:  https://bonsaidigitalcollective.co.uk/
- * Description: Lightweight front-end QA/snagging layer for admins. Toggle it on, click anywhere on the page to drop a note, tick it off when fixed. Not public facing.
- * Version:     1.2.0
+ * Description: Lightweight front-end QA/snagging layer for admins. Toggle it on, click anywhere on the page to drop a note, tick it off when fixed.
+ * Version:     1.3.0
  * Author:      The Bonsai Digital Collective
  * Author URI:  https://bonsaidigitalcollective.co.uk/
  * Text Domain: site-snags
  * Requires PHP: 7.4
  *
  * Internal tool for Bonsai builds. Built with an eye to being spun out as a
- * sellable plugin later — keep it decoupled from any specific child theme.
+ * sellable plugin later.
  */
 
 // Exit if accessed directly.
@@ -37,7 +37,7 @@ $site_snags_update_checker = PucFactory::buildUpdateChecker(
 $site_snags_update_checker->setBranch( 'main' );
 $site_snags_update_checker->getVcsApi()->enableReleaseAssets();
 
-define( 'SITE_SNAGS_VERSION', '1.2.0' );
+define( 'SITE_SNAGS_VERSION', '1.3.0' );
 define( 'SITE_SNAGS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SITE_SNAGS_URL', plugin_dir_url( __FILE__ ) );
 define( 'SITE_SNAGS_CAP', apply_filters( 'site_snags_capability', 'manage_options' ) );
@@ -50,6 +50,7 @@ require_once SITE_SNAGS_PATH . 'includes/class-site-snags-ajax.php';
 require_once SITE_SNAGS_PATH . 'includes/class-site-snags-frontend.php';
 require_once SITE_SNAGS_PATH . 'includes/class-site-snags-admin-list.php';
 require_once SITE_SNAGS_PATH . 'includes/class-site-snags-settings.php';
+require_once SITE_SNAGS_PATH . 'includes/class-site-snags-notifications.php';
 
 /**
  * Central permission check — used by both the front-end enqueue and the
@@ -80,6 +81,82 @@ function site_snags_user_is_allowed( $user_id = 0 ) {
 	}
 
 	return in_array( (int) $user_id, array_map( 'intval', $allowed_users ), true );
+}
+
+/**
+ * Default notification settings, merged over whatever the site has saved.
+ *
+ * Defaults to fully on so that turning the feature on is zero-config — a
+ * fresh install with no saved option emails the allow-list about all three
+ * events. Site owners dial it back on the Settings screen.
+ *
+ * @return array { 'enabled' => int, 'events' => array<string,int> }
+ */
+function site_snags_get_notification_settings() {
+	$defaults = array(
+		'enabled' => 1,
+		'events'  => array(
+			'created'      => 1,
+			'note_updated' => 1,
+			'completed'    => 1,
+		),
+	);
+
+	$saved = get_option( 'site_snags_notification_settings', array() );
+	if ( ! is_array( $saved ) ) {
+		$saved = array();
+	}
+
+	$settings           = wp_parse_args( $saved, $defaults );
+	$settings['events'] = wp_parse_args(
+		isset( $saved['events'] ) && is_array( $saved['events'] ) ? $saved['events'] : array(),
+		$defaults['events']
+	);
+
+	return $settings;
+}
+
+/**
+ * Users who should receive snag activity emails: everyone the permission
+ * model currently allows to snag, with a real email address, minus the
+ * person who triggered the event.
+ *
+ * @param int $exclude_user_id Optional. User to leave out (the actor).
+ * @return WP_User[] Keyed by user ID.
+ */
+function site_snags_get_notification_recipients( $exclude_user_id = 0 ) {
+	$allowed_users = get_option( 'site_snags_allowed_users', false );
+
+	if ( false === $allowed_users ) {
+		// Allow-list never configured — everyone with the capability.
+		$users = get_users( array( 'capability' => SITE_SNAGS_CAP ) );
+	} else {
+		$ids   = array_map( 'intval', (array) $allowed_users );
+		$users = $ids ? get_users( array( 'include' => $ids ) ) : array();
+	}
+
+	$recipients = array();
+
+	foreach ( $users as $user ) {
+		if ( $exclude_user_id && (int) $user->ID === (int) $exclude_user_id ) {
+			continue;
+		}
+		if ( ! is_email( $user->user_email ) ) {
+			continue;
+		}
+		if ( ! site_snags_user_is_allowed( $user->ID ) ) {
+			continue;
+		}
+		$recipients[ $user->ID ] = $user;
+	}
+
+	/**
+	 * Filter the list of users notified about snag activity.
+	 *
+	 * @param WP_User[] $recipients      Keyed by user ID.
+	 * @param int       $exclude_user_id The actor being left out.
+	 */
+	return apply_filters( 'site_snags_notification_recipients', $recipients, $exclude_user_id );
 }
 
 /**
@@ -116,6 +193,7 @@ final class Site_Snags {
 		new Site_Snags_Frontend();
 		new Site_Snags_Admin_List();
 		new Site_Snags_Settings();
+		new Site_Snags_Notifications();
 
 		register_activation_hook( __FILE__, array( $this, 'on_activation' ) );
 	}

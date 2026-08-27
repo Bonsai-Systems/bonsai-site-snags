@@ -72,6 +72,14 @@ class Site_Snags_Ajax {
 		update_post_meta( $post_id, '_snag_page_title', $page_title );
 		update_post_meta( $post_id, '_snag_note_raw', $note );
 
+		/**
+		 * Fires after a snag is created from the front end.
+		 *
+		 * @param int $post_id  New snag post ID.
+		 * @param int $actor_id User who created it.
+		 */
+		do_action( 'site_snags_snag_created', $post_id, get_current_user_id() );
+
 		wp_send_json_success(
 			array(
 				'id'         => $post_id,
@@ -105,6 +113,16 @@ class Site_Snags_Ajax {
 
 		update_post_meta( $post_id, '_snag_status', $status );
 
+		if ( 'done' === $status ) {
+			/**
+			 * Fires when a snag is marked done.
+			 *
+			 * @param int $post_id  Snag post ID.
+			 * @param int $actor_id User who completed it.
+			 */
+			do_action( 'site_snags_snag_completed', $post_id, get_current_user_id() );
+		}
+
 		wp_send_json_success( array( 'id' => $post_id, 'status' => $status ) );
 	}
 
@@ -133,6 +151,14 @@ class Site_Snags_Ajax {
 				'post_title' => wp_trim_words( $note, 8, '…' ),
 			)
 		);
+
+		/**
+		 * Fires after a snag's note text is edited in place.
+		 *
+		 * @param int $post_id  Snag post ID.
+		 * @param int $actor_id User who edited it.
+		 */
+		do_action( 'site_snags_snag_note_updated', $post_id, get_current_user_id() );
 
 		wp_send_json_success( array( 'id' => $post_id, 'note' => $note ) );
 	}
