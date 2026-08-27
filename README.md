@@ -123,6 +123,7 @@ Sites check for updates every 6 hours (`$checkPeriod` argument to `buildUpdateCh
 - Digest mode — one daily roundup email instead of one per event, for busy snagging sessions
 - Slack notification via Make.com webhook when a snag is logged or resolved — the `site_snags_snag_*` action hooks added in 1.3.0 make this a small glue script
 - CSV/PDF export of the punch-list for client handoff docs
+- Auto-push new snags into a client's ClickUp list — task per snag, status sync back to Open/Done — via the ClickUp API or a Make.com scenario hung off the `site_snags_snag_*` action hooks added in 1.3.0
 - Per-client-site enable/disable if this ever gets bundled into Drift App Suite rather than shipped as its own plugin
 - Optional "resolved but keep visible, faded" mode — already partly there via the done pin styling, could add a toggle to hide fully
 
