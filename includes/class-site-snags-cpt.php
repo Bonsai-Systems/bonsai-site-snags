@@ -16,6 +16,7 @@ class Site_Snags_CPT {
 	public function __construct() {
 		add_action( 'init', array( $this, 'register_post_type' ) );
 		add_action( 'init', array( $this, 'register_meta' ) );
+		add_action( 'add_meta_boxes_site_snag', array( $this, 'add_note_meta_box' ) );
 	}
 
 	/**
@@ -179,6 +180,40 @@ class Site_Snags_CPT {
 				)
 			)
 		);
+	}
+
+	/**
+	 * Register the read-only Note meta box on the snag edit screen.
+	 *
+	 * Replaces the (unused) post_content editor: the full snag note is
+	 * stored in `_snag_note_raw`, while the post title only holds the
+	 * first few words of it.
+	 */
+	public function add_note_meta_box() {
+		add_meta_box(
+			'site_snags_note',
+			__( 'Note', 'site-snags' ),
+			array( $this, 'render_note_meta_box' ),
+			'site_snag',
+			'normal',
+			'high'
+		);
+	}
+
+	/**
+	 * Output the full snag note text, read only.
+	 *
+	 * @param WP_Post $post Current snag post.
+	 */
+	public function render_note_meta_box( $post ) {
+		$note = get_post_meta( $post->ID, '_snag_note_raw', true );
+
+		if ( '' === $note || null === $note ) {
+			echo '<p class="description">' . esc_html__( 'No note recorded for this snag.', 'site-snags' ) . '</p>';
+			return;
+		}
+
+		echo '<p style="white-space:pre-wrap;margin:0;">' . esc_html( $note ) . '</p>';
 	}
 
 	/**
