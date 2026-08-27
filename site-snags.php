@@ -7,7 +7,10 @@
  * Author:      The Bonsai Digital Collective
  * Author URI:  https://bonsaidigitalcollective.co.uk/
  * Text Domain: site-snags
+ * Requires at least: 6.0
  * Requires PHP: 7.4
+ * License:     GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  *
  * Internal tool for Bonsai builds. Built with an eye to being spun out as a
  * sellable plugin later.

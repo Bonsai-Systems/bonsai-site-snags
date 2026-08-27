@@ -1,0 +1,3 @@
+# Keep internal/dev-only files out of `git archive` release zips.
+/.gitattributes  export-ignore
+/CLAUDE.md       export-ignore

@@ -12,6 +12,7 @@ Nobody without the `manage_options` capability (or whatever you filter it to —
 
 ## Requirements
 
+- WordPress 6.0+
 - PHP 7.4+
 - No ACF dependency — runs on any WP install with core APIs only
 
@@ -95,7 +96,7 @@ Allow-list is a single option (`site_snags_allowed_users`, an array of user IDs)
 - Open/Done view links above the table (with counts), same pattern as All/Published/Trash
 - A "View on page" row action alongside Edit/Trash
 
-The Title column is the note itself and links to the normal WP editor (note lives in the post content), so from this one list you can jump to either the live page or the snag's own edit screen.
+The Title column is the note itself (trimmed to the first few words) and links to the snag's edit screen, where a read-only **Note** meta box shows the full text and current priority. From this one list you can jump to either the live page or the snag's own record.
 
 ## Updates
 
@@ -103,16 +104,21 @@ Ships with [YahnisElsts/plugin-update-checker](https://github.com/YahnisElsts/pl
 
 To ship a new version:
 
-1. Bump the `Version:` header in `site-snags.php` and add a `CHANGELOG.md` entry.
+1. Bump the `Version:` header **and** the `SITE_SNAGS_VERSION` constant in `site-snags.php`, and add a `CHANGELOG.md` entry.
 2. Commit and push to `main`.
-3. Publish a GitHub Release tagged with the new version (release-assets mode is enabled, so attach a zip of the plugin folder — plain source-archive tags won't be picked up).
+3. Build the release zip (folder named `bonsai-site-snags/` at the root, dev-only files stripped via `.gitattributes` `export-ignore`):
+
+   ```bash
+   git archive --format=zip --prefix=bonsai-site-snags/ -o bonsai-site-snags-1.4.0.zip HEAD
+   ```
+
+4. Publish a GitHub Release tagged with the version (e.g. `1.4.0`) and attach that zip. Release-assets mode is enabled, so a plain source-archive tag won't be picked up — the zip must be attached.
 
 Sites check for updates every 6 hours (`$checkPeriod` argument to `buildUpdateChecker()`), or immediately if an admin clicks "Check again" on the Plugins screen.
 
 ## Ideas for v2 (not built yet)
 
 - Screenshot capture on pin creation (canvas/html2canvas) so notes carry visual context even if the element later changes
-- Priority/severity tag (low/medium/high) on each snag
 - Per-snag assign-to-user (route a snag to one person rather than notifying the whole allow-list) — email notifications themselves shipped in 1.3.0
 - Digest mode — one daily roundup email instead of one per event, for busy snagging sessions
 - Slack notification via Make.com webhook when a snag is logged or resolved — the `site_snags_snag_*` action hooks added in 1.3.0 make this a small glue script
