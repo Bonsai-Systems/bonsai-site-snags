@@ -77,7 +77,10 @@ class Site_Snags_CPT {
 			),
 			'map_meta_cap'        => true,
 			'hierarchical'        => false,
-			'supports'            => array( 'title', 'editor', 'comments' ),
+			// No 'editor' — the snag note is stored in the `_snag_note_raw`
+			// meta field, not post_content, so the WYSIWYG box was always
+			// empty and unused on the edit screen.
+			'supports'            => array( 'title', 'comments' ),
 			'has_archive'         => false,
 			'rewrite'             => false,
 			'show_in_rest'        => false,
