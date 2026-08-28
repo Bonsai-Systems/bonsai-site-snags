@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-08-28
+
+### Added
+- **Per-snag assign-to-user.** A snag can be routed to one person instead of notifying the whole allow-list. When a snag has an assignee, *every* notification email for that snag (added / note edited / done / commented / assigned) goes to that person only; unassigned snags are unchanged. The actor is still never emailed about their own change, even when they are the assignee
+  - [site-snags.php] New `_snag_assignee` post meta (integer user ID, `0` = unassigned). Helpers: `site_snags_get_allowed_users()` (shared basis for recipients + assignees — `site_snags_get_notification_recipients()` is now a thin wrapper over it), `site_snags_get_assignable_users()` (id → display name, emails never exposed), `site_snags_get_snag_assignee()` (re-validates on read, so an assignee who leaves the allow-list falls back to whole-list behaviour). Assignee pool filterable via `site_snags_assignable_users`
+  - [includes/class-site-snags-cpt.php] `_snag_assignee` registered with a `sanitize_assignee` callback that rejects any ID not currently eligible. The **Note** meta box gains an editable "Assigned to" dropdown (nonce + `save_post_site_snag` handler, capability-checked); note and priority stay read-only
+  - [includes/class-site-snags-ajax.php] `create_snag` accepts an `assignee`; new `site_snags_update_assignee` AJAX action for changing it from an existing pin. Both fire `site_snags_snag_assigned` (`$post_id`, `$assignee_id`, `$actor_id`); `fetch_for_page` / `create` responses now include `assignee`
+  - [includes/class-site-snags-notifications.php] `dispatch()` overrides its recipient list with just the assignee when one is set; emails carry an `Assigned to:` line. New `assigned` event (`on_assigned`) emails the assignee when a snag is routed to them
+  - [includes/class-site-snags-settings.php, site-snags.php] "A snag is assigned to someone" toggle on the notification settings screen; `assigned => 1` added to the defaults
+  - [includes/class-site-snags-admin-list.php] "Assigned" column plus an "All assignees / Unassigned / <user>" filter dropdown, folded into the existing combined `pre_get_posts` handler
+  - [includes/class-site-snags-frontend.php, assets/js/site-snags.js, assets/css/site-snags.css] Assignee `<select>` in both the create and detail popovers — set on creation, change later (saves immediately)
+
 ## [1.4.0] - 2026-08-27
 
 ### Added

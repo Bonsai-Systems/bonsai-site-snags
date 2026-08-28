@@ -17,6 +17,7 @@ class Site_Snags_CPT {
 		add_action( 'init', array( $this, 'register_post_type' ) );
 		add_action( 'init', array( $this, 'register_meta' ) );
 		add_action( 'add_meta_boxes_site_snag', array( $this, 'add_note_meta_box' ) );
+		add_action( 'save_post_site_snag', array( $this, 'save_note_meta_box' ), 10, 2 );
 	}
 
 	/**
@@ -184,6 +185,19 @@ class Site_Snags_CPT {
 
 		register_post_meta(
 			'site_snag',
+			'_snag_assignee',
+			array_merge(
+				$common_args,
+				array(
+					'type'              => 'integer',
+					'default'           => 0,
+					'sanitize_callback' => array( $this, 'sanitize_assignee' ),
+				)
+			)
+		);
+
+		register_post_meta(
+			'site_snag',
 			'_snag_page_title',
 			array_merge(
 				$common_args,
@@ -196,11 +210,12 @@ class Site_Snags_CPT {
 	}
 
 	/**
-	 * Register the read-only Note meta box on the snag edit screen.
+	 * Register the Note meta box on the snag edit screen.
 	 *
 	 * Replaces the (unused) post_content editor: the full snag note is
 	 * stored in `_snag_note_raw`, while the post title only holds the
-	 * first few words of it.
+	 * first few words of it. The note and priority are read-only here;
+	 * the assignee dropdown is the one editable control.
 	 */
 	public function add_note_meta_box() {
 		add_meta_box(
@@ -214,7 +229,8 @@ class Site_Snags_CPT {
 	}
 
 	/**
-	 * Output the full snag note text, read only.
+	 * Output the full snag note text (read only) plus an editable assignee
+	 * dropdown.
 	 *
 	 * @param WP_Post $post Current snag post.
 	 */
@@ -233,10 +249,73 @@ class Site_Snags_CPT {
 
 		if ( '' === $note || null === $note ) {
 			echo '<p class="description">' . esc_html__( 'No note recorded for this snag.', 'site-snags' ) . '</p>';
+		} else {
+			echo '<p style="white-space:pre-wrap;margin:0;">' . esc_html( $note ) . '</p>';
+		}
+
+		$assignee_id = site_snags_get_snag_assignee( $post->ID );
+		$assignable  = site_snags_get_assignable_users();
+
+		wp_nonce_field( 'site_snags_note_meta', 'site_snags_note_meta_nonce' );
+
+		echo '<p style="margin:14px 0 4px;"><label for="site_snags_assignee"><strong>' . esc_html__( 'Assigned to', 'site-snags' ) . '</strong></label></p>';
+		echo '<select name="site_snags_assignee" id="site_snags_assignee" style="max-width:100%;">';
+		printf(
+			'<option value="0">%s</option>',
+			esc_html__( '— Unassigned (notify everyone) —', 'site-snags' )
+		);
+		foreach ( $assignable as $id => $name ) {
+			printf(
+				'<option value="%1$d"%2$s>%3$s</option>',
+				(int) $id,
+				selected( $assignee_id, $id, false ),
+				esc_html( $name )
+			);
+		}
+		echo '</select>';
+		echo '<p class="description">' . esc_html__( 'When set, only this person is emailed about the snag — not the whole allow-list.', 'site-snags' ) . '</p>';
+	}
+
+	/**
+	 * Persist the assignee dropdown from the Note meta box.
+	 *
+	 * @param int     $post_id Snag post ID.
+	 * @param WP_Post $post    Snag post object.
+	 */
+	public function save_note_meta_box( $post_id, $post ) {
+		if ( ! isset( $_POST['site_snags_note_meta_nonce'] )
+			|| ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['site_snags_note_meta_nonce'] ) ), 'site_snags_note_meta' ) ) {
+			return;
+		}
+		if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+			return;
+		}
+		if ( ! current_user_can( SITE_SNAGS_CAP ) ) {
+			return;
+		}
+		if ( ! array_key_exists( 'site_snags_assignee', $_POST ) ) {
 			return;
 		}
 
-		echo '<p style="white-space:pre-wrap;margin:0;">' . esc_html( $note ) . '</p>';
+		$new = $this->sanitize_assignee( wp_unslash( $_POST['site_snags_assignee'] ) );
+		$old = (int) get_post_meta( $post_id, '_snag_assignee', true );
+
+		if ( $new === $old ) {
+			return;
+		}
+
+		update_post_meta( $post_id, '_snag_assignee', $new );
+
+		if ( $new ) {
+			/**
+			 * Fires when a snag is assigned (or reassigned) to a user.
+			 *
+			 * @param int $post_id     Snag post ID.
+			 * @param int $assignee_id User the snag is now assigned to.
+			 * @param int $actor_id    User who made the change.
+			 */
+			do_action( 'site_snags_snag_assigned', $post_id, $new, get_current_user_id() );
+		}
 	}
 
 	/**
@@ -270,5 +349,22 @@ class Site_Snags_CPT {
 	public function sanitize_priority( $value ) {
 		$value = sanitize_text_field( $value );
 		return array_key_exists( $value, site_snags_get_priorities() ) ? $value : 'normal';
+	}
+
+	/**
+	 * Only allow a user ID that is currently eligible to be an assignee.
+	 * Anything else (0, empty, a user who has left the allow-list) stores
+	 * as 0 — "unassigned".
+	 *
+	 * @param mixed $value Raw value.
+	 * @return int
+	 */
+	public function sanitize_assignee( $value ) {
+		$value = absint( $value );
+		if ( ! $value ) {
+			return 0;
+		}
+		$allowed = site_snags_get_allowed_users();
+		return isset( $allowed[ $value ] ) ? $value : 0;
 	}
 }

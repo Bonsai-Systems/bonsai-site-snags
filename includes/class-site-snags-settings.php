@@ -170,10 +170,17 @@ class Site_Snags_Settings {
 								<input type="checkbox" name="site_snags_notification_events[completed]" value="1" <?php checked( ! empty( $notify['events']['completed'] ) ); ?> />
 								<?php esc_html_e( 'A snag is marked done', 'site-snags' ); ?>
 							</label>
-							<label style="display:block;">
+							<label style="display:block; margin-bottom:6px;">
 								<input type="checkbox" name="site_snags_notification_events[commented]" value="1" <?php checked( ! empty( $notify['events']['commented'] ) ); ?> />
 								<?php esc_html_e( 'A comment is added to a snag', 'site-snags' ); ?>
 							</label>
+							<label style="display:block;">
+								<input type="checkbox" name="site_snags_notification_events[assigned]" value="1" <?php checked( ! empty( $notify['events']['assigned'] ) ); ?> />
+								<?php esc_html_e( 'A snag is assigned to someone', 'site-snags' ); ?>
+							</label>
+							<p class="description" style="margin-top:8px;">
+								<?php esc_html_e( 'When a snag has an assignee, every email for that snag goes to that person only — not the whole list above.', 'site-snags' ); ?>
+							</p>
 						</td>
 					</tr>
 				</table>
@@ -209,6 +216,7 @@ class Site_Snags_Settings {
 						'note_updated' => empty( $events_in['note_updated'] ) ? 0 : 1,
 						'completed'    => empty( $events_in['completed'] ) ? 0 : 1,
 						'commented'    => empty( $events_in['commented'] ) ? 0 : 1,
+						'assigned'     => empty( $events_in['assigned'] ) ? 0 : 1,
 					),
 				)
 			);

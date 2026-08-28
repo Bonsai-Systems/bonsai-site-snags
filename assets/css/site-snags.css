@@ -225,6 +225,26 @@ body.site-snags-mode-active * {
 	color: #ffffff;
 }
 
+/* Assignee dropdown — its own full-width row at the top of the action area */
+.site-snags-popover__assignee {
+	flex: 1 1 100%;
+	order: -1;
+	margin-bottom: 2px;
+	padding: 6px 8px;
+	border: 1px solid #e2ecf3;
+	border-radius: 6px;
+	font-family: inherit;
+	font-size: 12px;
+	background: #ffffff;
+	color: #000000 !important;
+	box-sizing: border-box;
+}
+
+.site-snags-popover__assignee:focus {
+	outline: 2px solid #ee4367;
+	outline-offset: 1px;
+}
+
 /* Admin list table status pill */
 .site-snags-status {
 	display: inline-block;

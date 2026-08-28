@@ -57,6 +57,15 @@ class Site_Snags_Frontend {
 			);
 		}
 
+		// id + display name only — never expose user emails to the front end.
+		$assignees = array();
+		foreach ( site_snags_get_assignable_users() as $id => $name ) {
+			$assignees[] = array(
+				'id'   => (int) $id,
+				'name' => $name,
+			);
+		}
+
 		global $wp;
 		$current_url = home_url( add_query_arg( array(), $wp->request ) );
 		// Fall back to REQUEST_URI if $wp->request is empty (front page etc).
@@ -74,9 +83,12 @@ class Site_Snags_Frontend {
 				'pageTitle'  => wp_get_document_title(),
 				'listUrl'    => admin_url( 'edit.php?post_type=site_snag' ),
 				'priorities' => $priorities,
+				'assignees'  => $assignees,
 				'i18n'       => array(
 					'placeholder' => __( 'What needs fixing here?', 'site-snags' ),
 					'priority'    => __( 'Priority', 'site-snags' ),
+					'assignee'    => __( 'Assignee', 'site-snags' ),
+					'unassigned'  => __( 'Unassigned', 'site-snags' ),
 					'save'        => __( 'Save', 'site-snags' ),
 					'cancel'      => __( 'Cancel', 'site-snags' ),
 					'markDone'    => __( 'Mark done', 'site-snags' ),

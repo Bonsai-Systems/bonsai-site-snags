@@ -18,6 +18,7 @@ class Site_Snags_Notifications {
 		add_action( 'site_snags_snag_created', array( $this, 'on_created' ), 10, 2 );
 		add_action( 'site_snags_snag_note_updated', array( $this, 'on_note_updated' ), 10, 2 );
 		add_action( 'site_snags_snag_completed', array( $this, 'on_completed' ), 10, 2 );
+		add_action( 'site_snags_snag_assigned', array( $this, 'on_assigned' ), 10, 3 );
 		add_action( 'wp_insert_comment', array( $this, 'on_comment' ), 10, 2 );
 	}
 
@@ -96,6 +97,28 @@ class Site_Snags_Notifications {
 	}
 
 	/**
+	 * A snag was assigned to a user.
+	 *
+	 * @param int $post_id     Snag post ID.
+	 * @param int $assignee_id User the snag was assigned to.
+	 * @param int $actor_id    User who made the change.
+	 */
+	public function on_assigned( $post_id, $assignee_id, $actor_id ) {
+		if ( ! $this->is_event_enabled( 'assigned' ) ) {
+			return;
+		}
+		$this->dispatch(
+			'assigned',
+			$post_id,
+			$actor_id,
+			/* translators: %s: page title or URL the snag was logged on. */
+			__( 'Snag assigned to you on %s', 'site-snags' ),
+			/* translators: 1: user display name, 2: page title or URL. */
+			__( '%1$s assigned you a snag on "%2$s".', 'site-snags' )
+		);
+	}
+
+	/**
 	 * A comment was added to a snag.
 	 *
 	 * @param int        $comment_id Comment ID.
@@ -149,7 +172,22 @@ class Site_Snags_Notifications {
 	 * @param array  $extra_lines  Optional extra body lines, inserted after the note/status block.
 	 */
 	private function dispatch( $event, $post_id, $actor_id, $subject_tmpl, $line_tmpl, $extra_lines = array() ) {
-		$recipients = site_snags_get_notification_recipients( $actor_id );
+		$assignee_id = site_snags_get_snag_assignee( $post_id );
+
+		if ( $assignee_id ) {
+			// Routed snag — only the assignee hears about it, and never the
+			// actor (even if they assigned it to themselves).
+			$recipients = array();
+			if ( (int) $assignee_id !== (int) $actor_id ) {
+				$assignee = get_userdata( $assignee_id );
+				if ( $assignee && is_email( $assignee->user_email ) ) {
+					$recipients = array( $assignee_id => $assignee );
+				}
+			}
+		} else {
+			$recipients = site_snags_get_notification_recipients( $actor_id );
+		}
+
 		if ( empty( $recipients ) ) {
 			return;
 		}
@@ -182,6 +220,14 @@ class Site_Snags_Notifications {
 			/* translators: %s: Urgent, Normal or Not urgent. */
 			sprintf( __( 'Priority: %s', 'site-snags' ), site_snags_get_priority_label( $post_id ) ),
 		);
+
+		if ( $assignee_id ) {
+			$assignee_user = get_userdata( $assignee_id );
+			if ( $assignee_user ) {
+				/* translators: %s: assignee display name. */
+				$body_lines[] = sprintf( __( 'Assigned to: %s', 'site-snags' ), $assignee_user->display_name );
+			}
+		}
 
 		if ( ! empty( $extra_lines ) ) {
 			$body_lines = array_merge( $body_lines, array_map( 'strval', $extra_lines ) );

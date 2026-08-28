@@ -55,6 +55,7 @@ class Site_Snags_Admin_List {
 			'snag_page'     => __( 'Page', 'site-snags' ),
 			'snag_priority' => __( 'Priority', 'site-snags' ),
 			'snag_status'   => __( 'Status', 'site-snags' ),
+			'snag_assignee' => __( 'Assigned', 'site-snags' ),
 			'author'        => $columns['author'] ?? __( 'Logged by', 'site-snags' ),
 			'date'          => $columns['date'],
 		);
@@ -88,6 +89,16 @@ class Site_Snags_Admin_List {
 				esc_attr( $priority ),
 				esc_html( $priorities[ $priority ]['label'] )
 			);
+		}
+
+		if ( 'snag_assignee' === $column ) {
+			$assignee = site_snags_get_snag_assignee( $post_id );
+			if ( $assignee ) {
+				$user = get_userdata( $assignee );
+				echo esc_html( $user ? $user->display_name : __( '(unknown user)', 'site-snags' ) );
+			} else {
+				echo '<span aria-hidden="true">&mdash;</span><span class="screen-reader-text">' . esc_html__( 'Unassigned', 'site-snags' ) . '</span>';
+			}
 		}
 
 		if ( 'snag_status' === $column ) {
@@ -184,6 +195,26 @@ class Site_Snags_Admin_List {
 			);
 		}
 		echo '</select>';
+
+		$current_assignee = isset( $_GET['snag_assignee'] ) ? sanitize_text_field( wp_unslash( $_GET['snag_assignee'] ) ) : '';
+
+		echo '<label class="screen-reader-text" for="snag_assignee">' . esc_html__( 'Filter by assignee', 'site-snags' ) . '</label>';
+		echo '<select name="snag_assignee" id="snag_assignee">';
+		printf( '<option value="">%s</option>', esc_html__( 'All assignees', 'site-snags' ) );
+		printf(
+			'<option value="unassigned"%1$s>%2$s</option>',
+			selected( $current_assignee, 'unassigned', false ),
+			esc_html__( 'Unassigned', 'site-snags' )
+		);
+		foreach ( site_snags_get_assignable_users() as $id => $name ) {
+			printf(
+				'<option value="%1$d"%2$s>%3$s</option>',
+				(int) $id,
+				selected( $current_assignee, (string) $id, false ),
+				esc_html( $name )
+			);
+		}
+		echo '</select>';
 	}
 
 	/**
@@ -236,6 +267,34 @@ class Site_Snags_Admin_List {
 						'value' => $priority,
 					);
 				}
+			}
+		}
+
+		if ( isset( $_GET['snag_assignee'] ) && '' !== $_GET['snag_assignee'] ) {
+			$assignee = sanitize_text_field( wp_unslash( $_GET['snag_assignee'] ) );
+
+			if ( 'unassigned' === $assignee ) {
+				// No meta row, or an explicit 0 — both count as unassigned.
+				$meta_query[] = array(
+					'relation' => 'OR',
+					array(
+						'key'     => '_snag_assignee',
+						'compare' => 'NOT EXISTS',
+					),
+					array(
+						'key'   => '_snag_assignee',
+						'value' => '0',
+					),
+					array(
+						'key'   => '_snag_assignee',
+						'value' => '',
+					),
+				);
+			} elseif ( ctype_digit( $assignee ) && (int) $assignee > 0 ) {
+				$meta_query[] = array(
+					'key'   => '_snag_assignee',
+					'value' => (int) $assignee,
+				);
 			}
 		}
 

@@ -16,6 +16,7 @@ class Site_Snags_Ajax {
 		add_action( 'wp_ajax_site_snags_create', array( $this, 'create_snag' ) );
 		add_action( 'wp_ajax_site_snags_update_status', array( $this, 'update_status' ) );
 		add_action( 'wp_ajax_site_snags_update_priority', array( $this, 'update_priority' ) );
+		add_action( 'wp_ajax_site_snags_update_assignee', array( $this, 'update_assignee' ) );
 		add_action( 'wp_ajax_site_snags_update_note', array( $this, 'update_note' ) );
 		add_action( 'wp_ajax_site_snags_delete', array( $this, 'delete_snag' ) );
 		add_action( 'wp_ajax_site_snags_fetch_for_page', array( $this, 'fetch_for_page' ) );
@@ -51,6 +52,11 @@ class Site_Snags_Ajax {
 			$priority = 'normal';
 		}
 
+		$assignee = isset( $_POST['assignee'] ) ? absint( $_POST['assignee'] ) : 0;
+		if ( $assignee && ! array_key_exists( $assignee, site_snags_get_allowed_users() ) ) {
+			$assignee = 0;
+		}
+
 		if ( '' === $note || '' === $url ) {
 			wp_send_json_error( array( 'message' => __( 'Missing note or URL.', 'site-snags' ) ), 400 );
 		}
@@ -75,6 +81,7 @@ class Site_Snags_Ajax {
 		update_post_meta( $post_id, '_snag_offset_y', max( 0, min( 100, $offset_y ) ) );
 		update_post_meta( $post_id, '_snag_status', 'open' );
 		update_post_meta( $post_id, '_snag_priority', $priority );
+		update_post_meta( $post_id, '_snag_assignee', $assignee );
 		update_post_meta( $post_id, '_snag_page_title', $page_title );
 		update_post_meta( $post_id, '_snag_note_raw', $note );
 
@@ -92,6 +99,7 @@ class Site_Snags_Ajax {
 				'note'       => $note,
 				'status'     => 'open',
 				'priority'   => $priority,
+				'assignee'   => $assignee,
 				'offset_x'   => $offset_x,
 				'offset_y'   => $offset_y,
 				'selector'   => $selector,
@@ -153,6 +161,41 @@ class Site_Snags_Ajax {
 		update_post_meta( $post_id, '_snag_priority', $priority );
 
 		wp_send_json_success( array( 'id' => $post_id, 'priority' => $priority ) );
+	}
+
+	/**
+	 * Assign a snag to a single user (or clear the assignment with 0).
+	 * When assigned, notifications for that snag route to the assignee only.
+	 */
+	public function update_assignee() {
+		$this->verify_request();
+
+		$post_id  = isset( $_POST['id'] ) ? absint( $_POST['id'] ) : 0;
+		$assignee = isset( $_POST['assignee'] ) ? absint( $_POST['assignee'] ) : 0;
+
+		if ( ! $post_id || 'site_snag' !== get_post_type( $post_id ) ) {
+			wp_send_json_error( array( 'message' => __( 'Snag not found.', 'site-snags' ) ), 404 );
+		}
+
+		if ( $assignee && ! array_key_exists( $assignee, site_snags_get_allowed_users() ) ) {
+			wp_send_json_error( array( 'message' => __( 'Invalid assignee.', 'site-snags' ) ), 400 );
+		}
+
+		$old = (int) get_post_meta( $post_id, '_snag_assignee', true );
+		update_post_meta( $post_id, '_snag_assignee', $assignee );
+
+		if ( $assignee && $assignee !== $old ) {
+			/**
+			 * Fires when a snag is assigned (or reassigned) to a user.
+			 *
+			 * @param int $post_id     Snag post ID.
+			 * @param int $assignee_id User the snag is now assigned to.
+			 * @param int $actor_id    User who made the change.
+			 */
+			do_action( 'site_snags_snag_assigned', $post_id, $assignee, get_current_user_id() );
+		}
+
+		wp_send_json_success( array( 'id' => $post_id, 'assignee' => $assignee ) );
 	}
 
 	/**
@@ -244,6 +287,7 @@ class Site_Snags_Ajax {
 				'note'       => get_post_meta( $post->ID, '_snag_note_raw', true ),
 				'status'     => get_post_meta( $post->ID, '_snag_status', true ),
 				'priority'   => site_snags_get_priority( $post->ID ),
+				'assignee'   => site_snags_get_snag_assignee( $post->ID ),
 				'selector'   => get_post_meta( $post->ID, '_snag_selector', true ),
 				'offset_x'   => (float) get_post_meta( $post->ID, '_snag_offset_x', true ),
 				'offset_y'   => (float) get_post_meta( $post->ID, '_snag_offset_y', true ),

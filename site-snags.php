@@ -3,7 +3,7 @@
  * Plugin Name: Bonsai Site Snags
  * Plugin URI:  https://bonsaidigitalcollective.co.uk/
  * Description: Lightweight front-end QA/snagging layer for admins. Toggle it on, click anywhere on the page to drop a note, tick it off when fixed.
- * Version:     1.4.0
+ * Version:     1.5.0
  * Author:      The Bonsai Digital Collective
  * Author URI:  https://bonsaidigitalcollective.co.uk/
  * Text Domain: site-snags
@@ -40,7 +40,7 @@ $site_snags_update_checker = PucFactory::buildUpdateChecker(
 $site_snags_update_checker->setBranch( 'main' );
 $site_snags_update_checker->getVcsApi()->enableReleaseAssets();
 
-define( 'SITE_SNAGS_VERSION', '1.4.0' );
+define( 'SITE_SNAGS_VERSION', '1.5.0' );
 define( 'SITE_SNAGS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SITE_SNAGS_URL', plugin_dir_url( __FILE__ ) );
 define( 'SITE_SNAGS_CAP', apply_filters( 'site_snags_capability', 'manage_options' ) );
@@ -143,7 +143,7 @@ function site_snags_get_priority_label( $post_id ) {
  * Default notification settings, merged over whatever the site has saved.
  *
  * Defaults to fully on so that turning the feature on is zero-config — a
- * fresh install with no saved option emails the allow-list about all three
+ * fresh install with no saved option emails the allow-list about all
  * events. Site owners dial it back on the Settings screen.
  *
  * @return array { 'enabled' => int, 'events' => array<string,int> }
@@ -156,6 +156,7 @@ function site_snags_get_notification_settings() {
 			'note_updated' => 1,
 			'completed'    => 1,
 			'commented'    => 1,
+			'assigned'     => 1,
 		),
 	);
 
@@ -174,6 +175,61 @@ function site_snags_get_notification_settings() {
 }
 
 /**
+ * Every user the permission model currently allows to snag, with a real
+ * email address. Shared basis for both notification recipients and the
+ * pool of users a snag can be assigned to.
+ *
+ * @return WP_User[] Keyed by user ID, ordered by display name.
+ */
+function site_snags_get_allowed_users() {
+	// Request-level cache — this is called in loops (admin list column,
+	// assignee validation) and each miss is a user query.
+	static $cache = null;
+	if ( null !== $cache ) {
+		return $cache;
+	}
+
+	$allowed_users = get_option( 'site_snags_allowed_users', false );
+
+	if ( false === $allowed_users ) {
+		// Allow-list never configured — everyone with the capability.
+		$users = get_users(
+			array(
+				'capability' => SITE_SNAGS_CAP,
+				'orderby'    => 'display_name',
+				'order'      => 'ASC',
+			)
+		);
+	} else {
+		$ids   = array_map( 'intval', (array) $allowed_users );
+		$users = $ids
+			? get_users(
+				array(
+					'include' => $ids,
+					'orderby' => 'display_name',
+					'order'   => 'ASC',
+				)
+			)
+			: array();
+	}
+
+	$out = array();
+
+	foreach ( $users as $user ) {
+		if ( ! is_email( $user->user_email ) ) {
+			continue;
+		}
+		if ( ! site_snags_user_is_allowed( $user->ID ) ) {
+			continue;
+		}
+		$out[ (int) $user->ID ] = $user;
+	}
+
+	$cache = $out;
+	return $cache;
+}
+
+/**
  * Users who should receive snag activity emails: everyone the permission
  * model currently allows to snag, with a real email address, minus the
  * person who triggered the event.
@@ -182,29 +238,10 @@ function site_snags_get_notification_settings() {
  * @return WP_User[] Keyed by user ID.
  */
 function site_snags_get_notification_recipients( $exclude_user_id = 0 ) {
-	$allowed_users = get_option( 'site_snags_allowed_users', false );
+	$recipients = site_snags_get_allowed_users();
 
-	if ( false === $allowed_users ) {
-		// Allow-list never configured — everyone with the capability.
-		$users = get_users( array( 'capability' => SITE_SNAGS_CAP ) );
-	} else {
-		$ids   = array_map( 'intval', (array) $allowed_users );
-		$users = $ids ? get_users( array( 'include' => $ids ) ) : array();
-	}
-
-	$recipients = array();
-
-	foreach ( $users as $user ) {
-		if ( $exclude_user_id && (int) $user->ID === (int) $exclude_user_id ) {
-			continue;
-		}
-		if ( ! is_email( $user->user_email ) ) {
-			continue;
-		}
-		if ( ! site_snags_user_is_allowed( $user->ID ) ) {
-			continue;
-		}
-		$recipients[ $user->ID ] = $user;
+	if ( $exclude_user_id ) {
+		unset( $recipients[ (int) $exclude_user_id ] );
 	}
 
 	/**
@@ -214,6 +251,46 @@ function site_snags_get_notification_recipients( $exclude_user_id = 0 ) {
 	 * @param int       $exclude_user_id The actor being left out.
 	 */
 	return apply_filters( 'site_snags_notification_recipients', $recipients, $exclude_user_id );
+}
+
+/**
+ * The pool of users a snag can be assigned to: id => display name, for the
+ * front-end assignee dropdown. Emails are never exposed to the front end.
+ *
+ * @return array<int,string>
+ */
+function site_snags_get_assignable_users() {
+	$out = array();
+
+	foreach ( site_snags_get_allowed_users() as $id => $user ) {
+		$out[ $id ] = $user->display_name;
+	}
+
+	/**
+	 * Filter the list of users a snag can be assigned to.
+	 *
+	 * @param array<int,string> $out Map of user ID => display name.
+	 */
+	return apply_filters( 'site_snags_assignable_users', $out );
+}
+
+/**
+ * The valid assignee user ID for a snag, or 0 if it is unassigned or the
+ * assigned user is no longer eligible. Re-validated on every read so a
+ * stale assignee falls back to the whole-allow-list behaviour rather than
+ * silently routing mail to nobody.
+ *
+ * @param int $post_id Snag post ID.
+ * @return int
+ */
+function site_snags_get_snag_assignee( $post_id ) {
+	$assignee = (int) get_post_meta( $post_id, '_snag_assignee', true );
+	if ( ! $assignee ) {
+		return 0;
+	}
+
+	$allowed = site_snags_get_allowed_users();
+	return isset( $allowed[ $assignee ] ) ? $assignee : 0;
 }
 
 /**

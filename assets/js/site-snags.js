@@ -202,6 +202,38 @@
 	}
 
 	/**
+	 * Build the assignee dropdown. Returns an empty string when there are
+	 * no assignable users, so the popover just omits it.
+	 *
+	 * @param {number|string} selectedId Currently assigned user ID, if any.
+	 */
+	function buildAssigneeSelect( selectedId ) {
+		var list = SiteSnags.assignees || [];
+		if ( ! list.length ) {
+			return '';
+		}
+
+		var sel = String( selectedId || '' );
+		var html = '<select class="site-snags-popover__assignee" aria-label="' + escAttr( SiteSnags.i18n.assignee ) + '">';
+		html += '<option value="">' + escAttr( SiteSnags.i18n.unassigned ) + '</option>';
+
+		list.forEach( function ( u ) {
+			html += '<option value="' + escAttr( u.id ) + '"' +
+				( sel === String( u.id ) ? ' selected' : '' ) + '>' + escAttr( u.name ) + '</option>';
+		} );
+
+		return html + '</select>';
+	}
+
+	/**
+	 * Read the selected assignee ID from a popover (0 = unassigned).
+	 */
+	function selectedAssignee( $popover ) {
+		var val = $popover.find( '.site-snags-popover__assignee' ).val();
+		return val ? val : 0;
+	}
+
+	/**
 	 * Popover shown when creating a brand new snag from a click.
 	 */
 	function openCreatePopover( x, y, selector, offsetX, offsetY ) {
@@ -212,6 +244,7 @@
 				'<textarea class="site-snags-popover__input" placeholder="' + SiteSnags.i18n.placeholder + '"></textarea>' +
 				'<div class="site-snags-popover__actions">' +
 					buildPrioritySelector( 'normal' ) +
+					buildAssigneeSelect( '' ) +
 					'<button type="button" class="site-snags-btn site-snags-btn--cancel">' + SiteSnags.i18n.cancel + '</button>' +
 					'<button type="button" class="site-snags-btn site-snags-btn--save">' + SiteSnags.i18n.save + '</button>' +
 				'</div>' +
@@ -246,6 +279,7 @@
 				offset_x: offsetX,
 				offset_y: offsetY,
 				priority: selectedPriority( $popover ),
+				assignee: selectedAssignee( $popover ),
 			} ).done( function ( response ) {
 				closeActivePopover();
 				if ( response && response.success ) {
@@ -270,6 +304,7 @@
 				'<textarea class="site-snags-popover__input">' + $( '<div>' ).text( snag.note ).html() + '</textarea>' +
 				'<div class="site-snags-popover__actions">' +
 					buildPrioritySelector( snag.priority || 'normal' ) +
+					buildAssigneeSelect( snag.assignee || '' ) +
 					'<button type="button" class="site-snags-btn site-snags-btn--delete">' + SiteSnags.i18n['delete'] + '</button>' +
 					'<button type="button" class="site-snags-btn site-snags-btn--status">' + ( isDone ? SiteSnags.i18n.reopen : SiteSnags.i18n.markDone ) + '</button>' +
 					'<button type="button" class="site-snags-btn site-snags-btn--save">' + SiteSnags.i18n.save + '</button>' +
@@ -292,6 +327,20 @@
 			} ).done( function ( response ) {
 				if ( response && response.success ) {
 					snag.priority = priority;
+				}
+			} );
+		} );
+
+		$popover.find( '.site-snags-popover__assignee' ).on( 'change', function () {
+			var assignee = $( this ).val() || 0;
+			$.post( SiteSnags.ajaxUrl, {
+				action: 'site_snags_update_assignee',
+				nonce: SiteSnags.nonce,
+				id: snag.id,
+				assignee: assignee,
+			} ).done( function ( response ) {
+				if ( response && response.success ) {
+					snag.assignee = response.data.assignee;
 				}
 			} );
 		} );

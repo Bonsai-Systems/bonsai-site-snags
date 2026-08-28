@@ -44,17 +44,27 @@ Under **wp-admin → Site Snags → Settings** there's an "Email notifications" 
 - a snag's note is edited
 - a snag is marked done
 - a comment is added to a snag
+- a snag is assigned to someone
 
-Each event has its own toggle. Whoever performed the action is never emailed about their own change. The email carries the note, current status, the front-end URL, and a link to the snag's edit screen (comment notifications also include the comment text).
+Each event has its own toggle. Whoever performed the action is never emailed about their own change. The email carries the note, current status, priority, assignee, the front-end URL, and a link to the snag's edit screen (comment notifications also include the comment text).
 
-Defaults to on for all four events once the plugin updates — turn the whole thing off, or drop individual events, on the Settings screen. Stored as a single `site_snags_notification_settings` option.
+Defaults to on for all events once the plugin updates — turn the whole thing off, or drop individual events, on the Settings screen. Stored as a single `site_snags_notification_settings` option.
 
 Two filters for customisation:
 
 - `site_snags_notification_recipients` — `( WP_User[] $recipients, int $exclude_user_id )` — change who gets mailed
 - `site_snags_notification_email` — `( array $email, string $event, int $post_id, int $actor_id )` — override `subject` / `body` / `headers` (e.g. send HTML, add a Cc, route to a shared inbox)
 
-There are also three action hooks if you want to bolt on Slack/Make.com delivery instead: `site_snags_snag_created`, `site_snags_snag_note_updated`, `site_snags_snag_completed`, each passing `( int $post_id, int $actor_id )`.
+There are also action hooks if you want to bolt on Slack/Make.com delivery instead: `site_snags_snag_created`, `site_snags_snag_note_updated`, `site_snags_snag_completed`, each passing `( int $post_id, int $actor_id )`, plus `site_snags_snag_assigned` passing `( int $post_id, int $assignee_id, int $actor_id )`.
+
+## Assigning a snag to one person
+
+By default every notification email goes to everyone who can use snagging. Assign a snag to a single person and only they get emailed about it — added, note edited, done, commented, all of it.
+
+- **Front end** — pick an assignee from the dropdown in the note popover, either when creating the snag or later from an existing pin (saves immediately).
+- **wp-admin** — the "Assigned to" dropdown in the **Note** meta box on the snag edit screen.
+
+The **wp-admin → Site Snags** list has an "Assigned" column and an assignee filter (including an "Unassigned" option). The pool of assignable users is the same as the notification pool — the allow-list, or everyone with the capability if it's unconfigured — and is filterable via `site_snags_assignable_users`. If an assigned user later drops off the allow-list, the snag quietly reverts to notifying everyone rather than emailing nobody.
 
 ## Priority
 
@@ -83,7 +93,7 @@ Clicks are stored as a CSS selector path + percentage offset within that element
 
 ## Data storage
 
-Custom post type `site_snag`, plain post meta (no ACF dependency so it works standalone). Fields: URL, page title, CSS selector, offset_x, offset_y, status (open/done), note, author, date — all via `register_post_meta` with sanitisation + capability-gated auth callbacks.
+Custom post type `site_snag`, plain post meta (no ACF dependency so it works standalone). Fields: URL, page title, CSS selector, offset_x, offset_y, status (open/done), priority, assignee, note, author, date — all via `register_post_meta` with sanitisation + capability-gated auth callbacks.
 
 Allow-list is a single option (`site_snags_allowed_users`, an array of user IDs). `false` (its default, never-saved state) means "everyone with the capability" for backwards compatibility on existing installs.
 
@@ -96,7 +106,7 @@ Allow-list is a single option (`site_snags_allowed_users`, an array of user IDs)
 - Open/Done view links above the table (with counts), same pattern as All/Published/Trash
 - A "View on page" row action alongside Edit/Trash
 
-The Title column is the note itself (trimmed to the first few words) and links to the snag's edit screen, where a read-only **Note** meta box shows the full text and current priority. From this one list you can jump to either the live page or the snag's own record.
+The Title column is the note itself (trimmed to the first few words) and links to the snag's edit screen, where the **Note** meta box shows the full text and current priority (read-only) plus an editable "Assigned to" dropdown. From this one list you can jump to either the live page or the snag's own record.
 
 ## Updates
 
@@ -109,7 +119,7 @@ To ship a new version:
 3. Build the release zip (folder named `bonsai-site-snags/` at the root, dev-only files stripped via `.gitattributes` `export-ignore`):
 
    ```bash
-   git archive --format=zip --prefix=bonsai-site-snags/ -o bonsai-site-snags-1.4.0.zip HEAD
+   git archive --format=zip --prefix=bonsai-site-snags/ -o bonsai-site-snags-1.5.0.zip HEAD
    ```
 
 4. Publish a GitHub Release tagged with the version (e.g. `1.4.0`) and attach that zip. Release-assets mode is enabled, so a plain source-archive tag won't be picked up — the zip must be attached.
@@ -119,11 +129,9 @@ Sites check for updates every 6 hours (`$checkPeriod` argument to `buildUpdateCh
 ## Ideas for v2 (not built yet)
 
 - Screenshot capture on pin creation (canvas/html2canvas) so notes carry visual context even if the element later changes
-- Per-snag assign-to-user (route a snag to one person rather than notifying the whole allow-list) — email notifications themselves shipped in 1.3.0
 - Digest mode — one daily roundup email instead of one per event, for busy snagging sessions
-- Slack notification via Make.com webhook when a snag is logged or resolved — the `site_snags_snag_*` action hooks added in 1.3.0 make this a small glue script
+- Slack notification via Make.com webhook when a snag is logged or resolved — the `site_snags_snag_*` action hooks make this a small glue script
 - CSV/PDF export of the punch-list for client handoff docs
-- Auto-push new snags into a client's ClickUp list — task per snag, status sync back to Open/Done — via the ClickUp API or a Make.com scenario hung off the `site_snags_snag_*` action hooks added in 1.3.0
 - Per-client-site enable/disable if this ever gets bundled into Drift App Suite rather than shipped as its own plugin
 - Optional "resolved but keep visible, faded" mode — already partly there via the done pin styling, could add a toggle to hide fully
 
