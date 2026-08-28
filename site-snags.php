@@ -31,7 +31,7 @@ require_once plugin_dir_path( __FILE__ ) . 'vendor/autoload.php';
 use YahnisElsts\PluginUpdateChecker\v5\PucFactory;
 
 $site_snags_update_checker = PucFactory::buildUpdateChecker(
-	'https://github.com/Bonsai-Systems/bonsai_site_snags',
+	'https://github.com/Bonsai-Systems/bonsai-site-snags',
 	__FILE__,
 	'bonsai-site-snags',
 	6
