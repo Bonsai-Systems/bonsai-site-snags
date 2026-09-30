@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-09-30
+
+### Changed
+- [includes/class-site-snags-admin-ui.php, assets/bonsai-admin-ui.css, assets/css/admin-settings.css] Site Snags → Settings restyled with the Bonsai admin design system: logo header with version, GitHub/changelog/"All snags" links; "Who can snag" and "Email notifications" in separate cards, each with a status badge (custom allow-list vs everyone; notifications on/off). Styles load on this screen only. No option, field or handler changes.
+
+### Fixed
+- [includes/class-site-snags-settings.php] Removed inline `style` attributes; the empty checkbox column header now has screen-reader text; the "Notifications" label is tied to its checkbox; the "Notify on" checkboxes sit in a fieldset with a legend.
+
 ## [1.5.0] - 2026-08-28
 
 ### Added

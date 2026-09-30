@@ -1,0 +1,32 @@
+/**
+ * Site Snags → Settings. Layered on bonsai-admin-ui.css, which supplies the
+ * header, cards, form controls, buttons and badges. Enqueued on that screen
+ * only (the front-end/list styles stay in site-snags.css).
+ */
+
+.site-snags-users {
+	max-width: 640px;
+	margin-top: 12px;
+}
+
+.site-snags-users__check {
+	width: 40px;
+}
+
+.site-snags-users__email {
+	color: #646970;
+}
+
+.site-snags-users__status {
+	margin-top: 8px;
+}
+
+/* Inside a card the Save button's own .submit margin already separates the
+ * two forms; the reset form sits straight under it. */
+.site-snags-reset .submit {
+	margin-top: 0;
+}
+
+.site-snags-settings .bonsai-ui-card .submit {
+	margin-bottom: 0;
+}

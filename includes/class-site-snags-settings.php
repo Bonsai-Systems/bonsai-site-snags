@@ -17,6 +17,20 @@ class Site_Snags_Settings {
 		add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
 		add_action( 'admin_post_site_snags_save_settings', array( $this, 'save_settings' ) );
 		add_action( 'admin_notices', array( $this, 'saved_notice' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+	}
+
+	/**
+	 * Bonsai admin styles, on this settings screen only.
+	 *
+	 * @param string $hook_suffix Current admin page hook suffix.
+	 */
+	public function enqueue_assets( $hook_suffix ) {
+		if ( 'site_snag_page_site-snags-settings' !== $hook_suffix ) {
+			return;
+		}
+		Site_Snags_Admin_UI::enqueue();
+		wp_enqueue_style( 'site-snags-admin-settings', SITE_SNAGS_URL . 'assets/css/admin-settings.css', array( Site_Snags_Admin_UI::HANDLE ), SITE_SNAGS_VERSION );
 	}
 
 	/**
@@ -63,130 +77,161 @@ class Site_Snags_Settings {
 		$allowed_ids   = $is_configured ? array_map( 'intval', $saved_setting ) : array();
 		$eligible      = $this->get_eligible_users();
 		?>
-		<div class="wrap site-snags-settings">
-			<h1><?php esc_html_e( 'Site Snags — Settings', 'site-snags' ); ?></h1>
+		<div class="wrap bonsai-ui site-snags-settings">
+			<?php
+			Site_Snags_Admin_UI::header(
+				__( 'Site Snags — Settings', 'site-snags' ),
+				__( 'Choose who can log snags from the front end, and who gets emailed about snag activity.', 'site-snags' ),
+				array(
+					array(
+						'label' => __( 'All snags', 'site-snags' ),
+						'url'   => admin_url( 'edit.php?post_type=site_snag' ),
+					),
+				)
+			);
+			?>
 
-			<p>
-				<?php esc_html_e( 'By default, everyone who holds the required capability can use the front-end snag toggle. Tick specific people below to restrict it to just them.', 'site-snags' ); ?>
-			</p>
-
-			<?php if ( empty( $eligible ) ) : ?>
-				<p><em><?php esc_html_e( 'No users currently hold the required capability, so there is nobody to list here yet.', 'site-snags' ); ?></em></p>
-			<?php else : ?>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="site_snags_save_settings" />
-					<?php wp_nonce_field( self::NONCE, 'site_snags_settings_nonce_field' ); ?>
-
-					<table class="widefat striped" style="max-width: 640px; margin-top: 12px;">
-						<thead>
-							<tr>
-								<th style="width: 40px;"></th>
-								<th><?php esc_html_e( 'User', 'site-snags' ); ?></th>
-								<th><?php esc_html_e( 'Role', 'site-snags' ); ?></th>
-							</tr>
-						</thead>
-						<tbody>
-							<?php foreach ( $eligible as $user ) : ?>
-								<tr>
-									<td>
-										<input
-											type="checkbox"
-											name="site_snags_allowed_users[]"
-											id="site-snags-user-<?php echo esc_attr( $user->ID ); ?>"
-											value="<?php echo esc_attr( $user->ID ); ?>"
-											<?php checked( ! $is_configured || in_array( $user->ID, $allowed_ids, true ) ); ?>
-										/>
-									</td>
-									<td>
-										<label for="site-snags-user-<?php echo esc_attr( $user->ID ); ?>">
-											<?php echo esc_html( $user->display_name ); ?>
-											<span style="color:#777;">(<?php echo esc_html( $user->user_email ); ?>)</span>
-										</label>
-									</td>
-									<td><?php echo esc_html( implode( ', ', $user->roles ) ); ?></td>
-								</tr>
-							<?php endforeach; ?>
-						</tbody>
-					</table>
-
-					<p class="description" style="margin-top: 8px;">
-						<?php
-						if ( $is_configured ) {
-							esc_html_e( 'Custom allow-list is active — only ticked users see the toggle.', 'site-snags' );
-						} else {
-							esc_html_e( 'Not yet configured — every user with the required capability currently has access. Saving this form (with your chosen ticks) turns on the restricted list.', 'site-snags' );
-						}
-						?>
+			<section class="bonsai-ui-card" aria-labelledby="site-snags-access-title">
+					<div class="bonsai-ui-card__head">
+						<h2 class="bonsai-ui-card__title" id="site-snags-access-title"><?php esc_html_e( 'Who can snag', 'site-snags' ); ?></h2>
+						<?php if ( $is_configured ) : ?>
+							<span class="bonsai-ui-badge bonsai-ui-badge--success"><?php esc_html_e( 'Custom allow-list', 'site-snags' ); ?></span>
+						<?php else : ?>
+							<span class="bonsai-ui-badge"><?php esc_html_e( 'Everyone with capability', 'site-snags' ); ?></span>
+						<?php endif; ?>
+					</div>
+					<p class="bonsai-ui-card__intro">
+						<?php esc_html_e( 'By default, everyone who holds the required capability can use the front-end snag toggle. Tick specific people below to restrict it to just them.', 'site-snags' ); ?>
 					</p>
 
-					<?php submit_button( __( 'Save Settings', 'site-snags' ) ); ?>
-				</form>
-
-				<?php if ( $is_configured ) : ?>
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top: -8px;">
+				<?php if ( empty( $eligible ) ) : ?>
+					<p><em><?php esc_html_e( 'No users currently hold the required capability, so there is nobody to list here yet.', 'site-snags' ); ?></em></p>
+				<?php else : ?>
+					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 						<input type="hidden" name="action" value="site_snags_save_settings" />
-						<input type="hidden" name="site_snags_reset" value="1" />
 						<?php wp_nonce_field( self::NONCE, 'site_snags_settings_nonce_field' ); ?>
-						<?php submit_button( __( 'Reset to "everyone with capability"', 'site-snags' ), 'secondary', 'submit', false ); ?>
+
+						<table class="widefat striped site-snags-users">
+							<thead>
+								<tr>
+									<th scope="col" class="site-snags-users__check"><span class="screen-reader-text"><?php esc_html_e( 'Allowed', 'site-snags' ); ?></span></th>
+									<th scope="col"><?php esc_html_e( 'User', 'site-snags' ); ?></th>
+									<th scope="col"><?php esc_html_e( 'Role', 'site-snags' ); ?></th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php foreach ( $eligible as $user ) : ?>
+									<tr>
+										<td>
+											<input
+												type="checkbox"
+												name="site_snags_allowed_users[]"
+												id="site-snags-user-<?php echo esc_attr( $user->ID ); ?>"
+												value="<?php echo esc_attr( $user->ID ); ?>"
+												<?php checked( ! $is_configured || in_array( $user->ID, $allowed_ids, true ) ); ?>
+											/>
+										</td>
+										<td>
+											<label for="site-snags-user-<?php echo esc_attr( $user->ID ); ?>">
+												<?php echo esc_html( $user->display_name ); ?>
+												<span class="site-snags-users__email">(<?php echo esc_html( $user->user_email ); ?>)</span>
+											</label>
+										</td>
+										<td><?php echo esc_html( implode( ', ', $user->roles ) ); ?></td>
+									</tr>
+								<?php endforeach; ?>
+							</tbody>
+						</table>
+
+						<p class="description site-snags-users__status">
+							<?php
+							if ( $is_configured ) {
+								esc_html_e( 'Custom allow-list is active — only ticked users see the toggle.', 'site-snags' );
+							} else {
+								esc_html_e( 'Not yet configured — every user with the required capability currently has access. Saving this form (with your chosen ticks) turns on the restricted list.', 'site-snags' );
+							}
+							?>
+						</p>
+
+						<?php submit_button( __( 'Save Settings', 'site-snags' ) ); ?>
 					</form>
+
+					<?php if ( $is_configured ) : ?>
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="site-snags-reset">
+							<input type="hidden" name="action" value="site_snags_save_settings" />
+							<input type="hidden" name="site_snags_reset" value="1" />
+							<?php wp_nonce_field( self::NONCE, 'site_snags_settings_nonce_field' ); ?>
+							<?php submit_button( __( 'Reset to "everyone with capability"', 'site-snags' ), 'secondary', 'submit', false ); ?>
+						</form>
+					<?php endif; ?>
 				<?php endif; ?>
-			<?php endif; ?>
-
-			<hr style="margin: 28px 0 20px;" />
-
-			<h2><?php esc_html_e( 'Email notifications', 'site-snags' ); ?></h2>
-			<p style="max-width: 640px;">
-				<?php esc_html_e( 'Email the people who can use snagging (the allow-list above, or everyone with the capability if it is unconfigured) when snag activity happens. Whoever performed the action is never emailed about their own change.', 'site-snags' ); ?>
-			</p>
+			</section>
 
 			<?php $notify = site_snags_get_notification_settings(); ?>
-			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-				<input type="hidden" name="action" value="site_snags_save_settings" />
-				<input type="hidden" name="site_snags_notifications_submit" value="1" />
-				<?php wp_nonce_field( self::NONCE, 'site_snags_settings_nonce_field' ); ?>
+			<section class="bonsai-ui-card" aria-labelledby="site-snags-notify-title">
+					<div class="bonsai-ui-card__head">
+						<h2 class="bonsai-ui-card__title" id="site-snags-notify-title"><?php esc_html_e( 'Email notifications', 'site-snags' ); ?></h2>
+						<?php if ( ! empty( $notify['enabled'] ) ) : ?>
+							<span class="bonsai-ui-badge bonsai-ui-badge--success"><?php esc_html_e( 'On', 'site-snags' ); ?></span>
+						<?php else : ?>
+							<span class="bonsai-ui-badge"><?php esc_html_e( 'Off', 'site-snags' ); ?></span>
+						<?php endif; ?>
+					</div>
+					<p class="bonsai-ui-card__intro">
+						<?php esc_html_e( 'Email the people who can use snagging (the allow-list above, or everyone with the capability if it is unconfigured) when snag activity happens. Whoever performed the action is never emailed about their own change.', 'site-snags' ); ?>
+					</p>
 
-				<table class="form-table" role="presentation" style="max-width: 640px;">
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Notifications', 'site-snags' ); ?></th>
-						<td>
-							<label>
-								<input type="checkbox" name="site_snags_notifications_enabled" value="1" <?php checked( ! empty( $notify['enabled'] ) ); ?> />
-								<?php esc_html_e( 'Send email notifications', 'site-snags' ); ?>
-							</label>
-						</td>
-					</tr>
-					<tr>
-						<th scope="row"><?php esc_html_e( 'Notify on', 'site-snags' ); ?></th>
-						<td>
-							<label style="display:block; margin-bottom:6px;">
-								<input type="checkbox" name="site_snags_notification_events[created]" value="1" <?php checked( ! empty( $notify['events']['created'] ) ); ?> />
-								<?php esc_html_e( 'A snag is added', 'site-snags' ); ?>
-							</label>
-							<label style="display:block; margin-bottom:6px;">
-								<input type="checkbox" name="site_snags_notification_events[note_updated]" value="1" <?php checked( ! empty( $notify['events']['note_updated'] ) ); ?> />
-								<?php esc_html_e( 'A snag note is edited', 'site-snags' ); ?>
-							</label>
-							<label style="display:block; margin-bottom:6px;">
-								<input type="checkbox" name="site_snags_notification_events[completed]" value="1" <?php checked( ! empty( $notify['events']['completed'] ) ); ?> />
-								<?php esc_html_e( 'A snag is marked done', 'site-snags' ); ?>
-							</label>
-							<label style="display:block; margin-bottom:6px;">
-								<input type="checkbox" name="site_snags_notification_events[commented]" value="1" <?php checked( ! empty( $notify['events']['commented'] ) ); ?> />
-								<?php esc_html_e( 'A comment is added to a snag', 'site-snags' ); ?>
-							</label>
-							<label style="display:block;">
-								<input type="checkbox" name="site_snags_notification_events[assigned]" value="1" <?php checked( ! empty( $notify['events']['assigned'] ) ); ?> />
-								<?php esc_html_e( 'A snag is assigned to someone', 'site-snags' ); ?>
-							</label>
-							<p class="description" style="margin-top:8px;">
-								<?php esc_html_e( 'When a snag has an assignee, every email for that snag goes to that person only — not the whole list above.', 'site-snags' ); ?>
-							</p>
-						</td>
-					</tr>
-				</table>
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="site_snags_save_settings" />
+					<input type="hidden" name="site_snags_notifications_submit" value="1" />
+					<?php wp_nonce_field( self::NONCE, 'site_snags_settings_nonce_field' ); ?>
 
-				<?php submit_button( __( 'Save Notification Settings', 'site-snags' ) ); ?>
-			</form>
+					<table class="form-table" role="presentation">
+						<tr>
+							<th scope="row"><label for="site-snags-notifications-enabled"><?php esc_html_e( 'Notifications', 'site-snags' ); ?></label></th>
+							<td>
+								<label>
+									<input type="checkbox" id="site-snags-notifications-enabled" name="site_snags_notifications_enabled" value="1" <?php checked( ! empty( $notify['enabled'] ) ); ?> />
+									<?php esc_html_e( 'Send email notifications', 'site-snags' ); ?>
+								</label>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><?php esc_html_e( 'Notify on', 'site-snags' ); ?></th>
+							<td>
+								<fieldset>
+								<legend class="screen-reader-text"><?php esc_html_e( 'Notify on', 'site-snags' ); ?></legend>
+								<label>
+									<input type="checkbox" name="site_snags_notification_events[created]" value="1" <?php checked( ! empty( $notify['events']['created'] ) ); ?> />
+									<?php esc_html_e( 'A snag is added', 'site-snags' ); ?>
+								</label>
+								<label>
+									<input type="checkbox" name="site_snags_notification_events[note_updated]" value="1" <?php checked( ! empty( $notify['events']['note_updated'] ) ); ?> />
+									<?php esc_html_e( 'A snag note is edited', 'site-snags' ); ?>
+								</label>
+								<label>
+									<input type="checkbox" name="site_snags_notification_events[completed]" value="1" <?php checked( ! empty( $notify['events']['completed'] ) ); ?> />
+									<?php esc_html_e( 'A snag is marked done', 'site-snags' ); ?>
+								</label>
+								<label>
+									<input type="checkbox" name="site_snags_notification_events[commented]" value="1" <?php checked( ! empty( $notify['events']['commented'] ) ); ?> />
+									<?php esc_html_e( 'A comment is added to a snag', 'site-snags' ); ?>
+								</label>
+								<label>
+									<input type="checkbox" name="site_snags_notification_events[assigned]" value="1" <?php checked( ! empty( $notify['events']['assigned'] ) ); ?> />
+									<?php esc_html_e( 'A snag is assigned to someone', 'site-snags' ); ?>
+								</label>
+								</fieldset>
+								<p class="description">
+									<?php esc_html_e( 'When a snag has an assignee, every email for that snag goes to that person only — not the whole list above.', 'site-snags' ); ?>
+								</p>
+							</td>
+						</tr>
+					</table>
+
+					<?php submit_button( __( 'Save Notification Settings', 'site-snags' ) ); ?>
+				</form>
+			</section>
 		</div>
 		<?php
 	}

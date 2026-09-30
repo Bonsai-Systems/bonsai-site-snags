@@ -3,7 +3,7 @@
  * Plugin Name: Bonsai Site Snags
  * Plugin URI:  https://bonsaidigitalcollective.co.uk/
  * Description: Lightweight front-end QA/snagging layer for admins. Toggle it on, click anywhere on the page to drop a note, tick it off when fixed.
- * Version:     1.5.0
+ * Version:     1.6.0
  * Author:      The Bonsai Digital Collective
  * Author URI:  https://bonsaidigitalcollective.co.uk/
  * Text Domain: site-snags
@@ -40,7 +40,7 @@ $site_snags_update_checker = PucFactory::buildUpdateChecker(
 $site_snags_update_checker->setBranch( 'main' );
 $site_snags_update_checker->getVcsApi()->enableReleaseAssets();
 
-define( 'SITE_SNAGS_VERSION', '1.5.0' );
+define( 'SITE_SNAGS_VERSION', '1.6.0' );
 define( 'SITE_SNAGS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SITE_SNAGS_URL', plugin_dir_url( __FILE__ ) );
 define( 'SITE_SNAGS_CAP', apply_filters( 'site_snags_capability', 'manage_options' ) );
@@ -52,6 +52,7 @@ require_once SITE_SNAGS_PATH . 'includes/class-site-snags-cpt.php';
 require_once SITE_SNAGS_PATH . 'includes/class-site-snags-ajax.php';
 require_once SITE_SNAGS_PATH . 'includes/class-site-snags-frontend.php';
 require_once SITE_SNAGS_PATH . 'includes/class-site-snags-admin-list.php';
+require_once SITE_SNAGS_PATH . 'includes/class-site-snags-admin-ui.php';
 require_once SITE_SNAGS_PATH . 'includes/class-site-snags-settings.php';
 require_once SITE_SNAGS_PATH . 'includes/class-site-snags-notifications.php';
 
