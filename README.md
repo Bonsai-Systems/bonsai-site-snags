@@ -34,11 +34,11 @@ Two layers of control:
    } );
    ```
 
-2. **Per-user allow-list** — under **wp-admin → Site Snags → Settings**, tick exactly which of those eligible users can actually see the toggle and log snags. Leave it unconfigured (never saved) and everyone with the capability gets access, same as before. Once saved, only ticked users see it — including on sites where multiple people have `manage_options` but you only want specific people using it on a given build.
+2. **Per-user allow-list** — under **Bonsai → Site Snags → Settings**, tick exactly which of those eligible users can actually see the toggle and log snags. Leave it unconfigured (never saved) and everyone with the capability gets access, same as before. Once saved, only ticked users see it — including on sites where multiple people have `manage_options` but you only want specific people using it on a given build.
 
 ## Email notifications
 
-Under **wp-admin → Site Snags → Settings** there's an "Email notifications" section. When enabled, everyone who can use snagging (the allow-list, or everyone with the capability if it's unconfigured) gets a plain-text email when:
+Under **Bonsai → Site Snags → Settings** there's an "Email notifications" section. When enabled, everyone who can use snagging (the allow-list, or everyone with the capability if it's unconfigured) gets a plain-text email when:
 
 - a snag is added
 - a snag's note is edited
@@ -99,7 +99,7 @@ Allow-list is a single option (`site_snags_allowed_users`, an array of user IDs)
 
 ## Admin list page
 
-**wp-admin → Site Snags** is the standard CPT list table with three additions:
+**Bonsai → Site Snags → All snags** is the standard CPT list table with three additions:
 
 - Page column — links straight to the live URL the snag was logged on
 - Status column — Open/Done pill
@@ -107,6 +107,14 @@ Allow-list is a single option (`site_snags_allowed_users`, an array of user IDs)
 - A "View on page" row action alongside Edit/Trash
 
 The Title column is the note itself (trimmed to the first few words) and links to the snag's edit screen, where the **Note** meta box shows the full text and current priority (read-only) plus an editable "Assigned to" dropdown. From this one list you can jump to either the live page or the snag's own record.
+
+## Bonsai menu
+
+This plugin's screens live in the shared **Bonsai** admin menu, provided by [Bonsai Hub](https://github.com/Bonsai-Systems/bonsai-hub). A copy of the hub is bundled in `lib/bonsai-hub/`, so this plugin sets up the menu on its own. Other Bonsai plugins appear alongside it, and **Bonsai → Plugins** installs, activates and deactivates the rest of the suite.
+
+- Don't edit `lib/bonsai-hub/` by hand. Change the bonsai-hub repo and run its `bin/sync.sh`.
+- The snag list stays at `edit.php?post_type=site_snag` (the **All snags** tab). The old settings URL redirects to the Settings tab.
+- Release zips must include `lib/`.
 
 ## Updates
 

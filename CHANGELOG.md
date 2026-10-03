@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-03
+
+### Added
+- [lib/bonsai-hub/] Bundled Bonsai Hub 1.0.0: a shared top-level **Bonsai** admin menu with a left-hand nav for every Bonsai plugin, plus a **Plugins** screen to install, activate and deactivate the rest of the suite from GitHub releases.
+
+### Changed
+- [includes/class-site-snags-settings.php, includes/class-site-snags-cpt.php] The top-level **Site Snags** menu is replaced by **Bonsai → Site Snags**, with an **All snags** tab (the existing list at `edit.php?post_type=site_snag`) and a **Settings** tab (`admin.php?page=site-snags&tab=settings`). Users with the snag capability who can't manage settings go straight to the list. The old settings URL redirects. No option or field changes.
+- [includes/class-site-snags-settings.php] The snag list and edit screens highlight Bonsai → Site Snags in the sidebar.
+
+### Removed
+- [includes/class-site-snags-admin-ui.php, assets/] Per-plugin header and design-system copy. The hub now provides both.
+
 ## [1.6.0] - 2026-09-30
 
 ### Changed

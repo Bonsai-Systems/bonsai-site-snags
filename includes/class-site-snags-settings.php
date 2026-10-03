@@ -1,7 +1,8 @@
 <?php
 /**
  * Settings screen: tick which users are allowed to see the front-end
- * toggle and log snags. Lives under Site Snags > Settings in wp-admin.
+ * toggle and log snags. Lives under Bonsai → Site Snags → Settings in
+ * wp-admin, alongside an "All snags" tab linking to the snag list.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -12,39 +13,84 @@ class Site_Snags_Settings {
 
 	const OPTION_KEY = 'site_snags_allowed_users';
 	const NONCE      = 'site_snags_settings_nonce';
+	const PAGE_SLUG  = 'site-snags';
 
 	public function __construct() {
-		add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
+		add_filter( 'bonsai_hub_modules', array( $this, 'register_hub_module' ) );
 		add_action( 'admin_post_site_snags_save_settings', array( $this, 'save_settings' ) );
-		add_action( 'admin_notices', array( $this, 'saved_notice' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+		add_filter( 'parent_file', array( $this, 'highlight_parent_menu' ) );
+		add_filter( 'submenu_file', array( $this, 'highlight_submenu' ) );
 	}
 
 	/**
-	 * Bonsai admin styles, on this settings screen only.
+	 * Registers Bonsai → Site Snags with the shared Bonsai menu: an
+	 * "All snags" tab linking to the post type list, and Settings.
 	 *
-	 * @param string $hook_suffix Current admin page hook suffix.
+	 * Anyone with SITE_SNAGS_CAP gets the menu item; those who can't manage
+	 * settings are sent straight to the list by the hub. The old
+	 * edit.php?post_type=site_snag&page=site-snags-settings URL redirects to
+	 * the Settings tab.
+	 *
+	 * @param array $modules Modules registered so far.
+	 * @return array
 	 */
-	public function enqueue_assets( $hook_suffix ) {
-		if ( 'site_snag_page_site-snags-settings' !== $hook_suffix ) {
-			return;
-		}
-		Site_Snags_Admin_UI::enqueue();
-		wp_enqueue_style( 'site-snags-admin-settings', SITE_SNAGS_URL . 'assets/css/admin-settings.css', array( Site_Snags_Admin_UI::HANDLE ), SITE_SNAGS_VERSION );
+	public function register_hub_module( $modules ) {
+		$modules[ self::PAGE_SLUG ] = array(
+			'label'       => __( 'Site Snags', 'site-snags' ),
+			'title'       => __( 'Site Snags', 'site-snags' ),
+			'description' => __( 'Choose who can log snags from the front end, and who gets emailed about snag activity.', 'site-snags' ),
+			'version'     => SITE_SNAGS_VERSION,
+			'repo'        => 'https://github.com/Bonsai-Systems/bonsai-site-snags',
+			'capability'  => SITE_SNAGS_CAP,
+			'enqueue'     => array( $this, 'enqueue_assets' ),
+			'legacy'      => array( 'site-snags-settings' => 'settings' ),
+			'tabs'        => array(
+				'snags'    => array(
+					'label' => __( 'All snags', 'site-snags' ),
+					'url'   => admin_url( 'edit.php?post_type=site_snag' ),
+				),
+				'settings' => array(
+					'label'      => __( 'Settings', 'site-snags' ),
+					'render'     => array( $this, 'render_settings_page' ),
+					'capability' => 'manage_options',
+				),
+			),
+		);
+
+		return $modules;
 	}
 
 	/**
-	 * Add "Settings" as a submenu under the Site Snags CPT menu.
+	 * Settings screen styles. Called by the hub on this screen only, after
+	 * the shared Bonsai styles.
 	 */
-	public function add_settings_page() {
-		add_submenu_page(
-			'edit.php?post_type=site_snag',
-			__( 'Site Snags Settings', 'site-snags' ),
-			__( 'Settings', 'site-snags' ),
-			'manage_options',
-			'site-snags-settings',
-			array( $this, 'render_settings_page' )
-		);
+	public function enqueue_assets() {
+		wp_enqueue_style( 'site-snags-admin-settings', SITE_SNAGS_URL . 'assets/css/admin-settings.css', array( 'bonsai-hub-ui' ), SITE_SNAGS_VERSION );
+	}
+
+	/**
+	 * Keeps Bonsai open in the sidebar on the snag list and edit screens,
+	 * which have no menu item of their own any more.
+	 *
+	 * @param string $parent_file Parent menu slug for the current screen.
+	 * @return string
+	 */
+	public function highlight_parent_menu( $parent_file ) {
+		global $typenow;
+
+		return 'site_snag' === $typenow ? 'bonsai' : $parent_file;
+	}
+
+	/**
+	 * Highlights Bonsai → Site Snags on the snag list and edit screens.
+	 *
+	 * @param string|null $submenu_file Submenu slug for the current screen.
+	 * @return string|null
+	 */
+	public function highlight_submenu( $submenu_file ) {
+		global $typenow;
+
+		return 'site_snag' === $typenow ? self::PAGE_SLUG : $submenu_file;
 	}
 
 	/**
@@ -65,32 +111,16 @@ class Site_Snags_Settings {
 	}
 
 	/**
-	 * Render the settings screen.
+	 * Render the Settings tab. The hub prints the page wrap, header, notices
+	 * and tabs around it, and has already checked manage_options.
 	 */
 	public function render_settings_page() {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			return;
-		}
-
 		$saved_setting = get_option( self::OPTION_KEY, false );
 		$is_configured = ( false !== $saved_setting );
 		$allowed_ids   = $is_configured ? array_map( 'intval', $saved_setting ) : array();
 		$eligible      = $this->get_eligible_users();
 		?>
-		<div class="wrap bonsai-ui site-snags-settings">
-			<?php
-			Site_Snags_Admin_UI::header(
-				__( 'Site Snags — Settings', 'site-snags' ),
-				__( 'Choose who can log snags from the front end, and who gets emailed about snag activity.', 'site-snags' ),
-				array(
-					array(
-						'label' => __( 'All snags', 'site-snags' ),
-						'url'   => admin_url( 'edit.php?post_type=site_snag' ),
-					),
-				)
-			);
-			?>
-
+		<div class="site-snags-settings">
 			<section class="bonsai-ui-card" aria-labelledby="site-snags-access-title">
 					<div class="bonsai-ui-card__head">
 						<h2 class="bonsai-ui-card__title" id="site-snags-access-title"><?php esc_html_e( 'Who can snag', 'site-snags' ); ?></h2>
@@ -288,36 +318,20 @@ class Site_Snags_Settings {
 	}
 
 	/**
-	 * Redirect back to the settings screen with the "saved" flag set.
+	 * Redirect back to the Settings tab. ?settings-updated makes the hub
+	 * show its "Settings saved." notice.
 	 */
 	private function redirect_to_settings() {
 		wp_safe_redirect(
 			add_query_arg(
 				array(
-					'post_type' => 'site_snag',
-					'page'      => 'site-snags-settings',
-					'updated'   => '1',
+					'page'             => self::PAGE_SLUG,
+					'tab'              => 'settings',
+					'settings-updated' => 'true',
 				),
-				admin_url( 'edit.php' )
+				admin_url( 'admin.php' )
 			)
 		);
 		exit;
-	}
-
-	/**
-	 * Simple "Settings saved" admin notice on the settings screen.
-	 */
-	public function saved_notice() {
-		if ( ! isset( $_GET['page'] ) || 'site-snags-settings' !== $_GET['page'] ) {
-			return;
-		}
-		if ( empty( $_GET['updated'] ) ) {
-			return;
-		}
-		?>
-		<div class="notice notice-success is-dismissible">
-			<p><?php esc_html_e( 'Site Snags settings saved.', 'site-snags' ); ?></p>
-		</div>
-		<?php
 	}
 }

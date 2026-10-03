@@ -41,9 +41,9 @@ class Site_Snags_CPT {
 			'public'              => false,
 			'publicly_queryable'  => false,
 			'show_ui'             => true,
-			'show_in_menu'        => true,
-			'menu_icon'           => 'dashicons-flag',
-			'menu_position'       => 100,
+			// No menu of its own: the list is the "All snags" tab of
+			// Bonsai → Site Snags (see Site_Snags_Settings::register_hub_module()).
+			'show_in_menu'        => false,
 			'capability_type'     => 'post',
 			/**
 			 * Deliberately does NOT override the singular meta-cap keys
