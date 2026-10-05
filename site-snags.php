@@ -3,7 +3,7 @@
  * Plugin Name: Bonsai Site Snags
  * Plugin URI:  https://bonsaidigitalcollective.co.uk/
  * Description: Lightweight front-end QA/snagging layer for admins. Toggle it on, click anywhere on the page to drop a note, tick it off when fixed.
- * Version:     1.7.0
+ * Version:     1.7.1
  * Author:      The Bonsai Digital Collective
  * Author URI:  https://bonsaidigitalcollective.co.uk/
  * Text Domain: site-snags
@@ -44,7 +44,7 @@ $site_snags_update_checker->getVcsApi()->enableReleaseAssets();
 // the bonsai-hub repo; update it with bonsai-hub/bin/sync.sh, not by hand.
 require_once plugin_dir_path( __FILE__ ) . 'lib/bonsai-hub/bonsai-hub.php';
 
-define( 'SITE_SNAGS_VERSION', '1.7.0' );
+define( 'SITE_SNAGS_VERSION', '1.7.1' );
 define( 'SITE_SNAGS_PATH', plugin_dir_path( __FILE__ ) );
 define( 'SITE_SNAGS_URL', plugin_dir_url( __FILE__ ) );
 define( 'SITE_SNAGS_CAP', apply_filters( 'site_snags_capability', 'manage_options' ) );

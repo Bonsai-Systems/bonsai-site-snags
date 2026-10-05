@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-10-05
+
+### Changed
+- [lib/bonsai-hub/] Bundled Bonsai Hub updated to 1.0.1: the **Bonsai** admin menu now sits directly below Dashboard instead of above it.
+
 ## [1.7.0] - 2026-10-03
 
 ### Added
